@@ -160,15 +160,15 @@ public class MontrealBenchMapView extends View {
     }
 
     // Colors - Refined Architectural Swiss Palette
-    private static final int COLOR_WATER = Color.parseColor("#E2E8F0");
-    private static final int COLOR_LAND = Color.parseColor("#FFFFFF");
-    private static final int COLOR_SHORELINE = Color.parseColor("#0F172A");
-    private static final int COLOR_PARK = Color.parseColor("#EBF5EE");         // Serene organic sage green
-    private static final int COLOR_PARK_BORDER = Color.parseColor("#94A3B8");   // Park boundary hairline
-    private static final int COLOR_STREET_MAJOR = Color.parseColor("#334155");  // Crisp slate 700
-    private static final int COLOR_STREET_MINOR = Color.parseColor("#94A3B8");  // Subtle slate 400
+    private static final int COLOR_WATER = Color.parseColor("#EBF1F6");         // Crisp architectural Nordic water
+    private static final int COLOR_LAND = Color.parseColor("#FFFFFF");          // Pure clean landmass
+    private static final int COLOR_SHORELINE = Color.parseColor("#CBD5E1");     // Subtle hairline perimeter
+    private static final int COLOR_PARK = Color.parseColor("#EAF5EC");         // Serene organic sage green
+    private static final int COLOR_PARK_BORDER = Color.parseColor("#A7D7B5");   // Park boundary hairline
+    private static final int COLOR_STREET_MAJOR = Color.parseColor("#475569");  // Slate 600 - elegant arterial lines
+    private static final int COLOR_STREET_MINOR = Color.parseColor("#CBD5E1");  // Slate 300 - whisper hairline residential
     private static final int COLOR_BENCH_STREET = Color.parseColor("#1E293B");  // Swiss charcoal
-    private static final int COLOR_BENCH_PARK = Color.parseColor("#2D6A4F");    // Emerald sage
+    private static final int COLOR_BENCH_PARK = Color.parseColor("#15803D");    // Forest emerald
     private static final int COLOR_SWISS_RED = Color.parseColor("#DE3831");
     private static final int COLOR_WHITE = Color.parseColor("#FFFFFF");
 
@@ -181,6 +181,7 @@ public class MontrealBenchMapView extends View {
     private final Paint paintStreetMinor = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchStreet = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchPark = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintBenchHalo = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelected = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelectedGap = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelectedCore = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -277,7 +278,7 @@ public class MontrealBenchMapView extends View {
 
         paintShoreline.setColor(COLOR_SHORELINE);
         paintShoreline.setStyle(Paint.Style.STROKE);
-        paintShoreline.setStrokeWidth(1.6f * density);
+        paintShoreline.setStrokeWidth(1.1f * density);
 
         // Parks & Green Spaces
         paintPark.setColor(COLOR_PARK);
@@ -285,19 +286,19 @@ public class MontrealBenchMapView extends View {
 
         paintParkBorder.setColor(COLOR_PARK_BORDER);
         paintParkBorder.setStyle(Paint.Style.STROKE);
-        paintParkBorder.setStrokeWidth(0.8f * density);
+        paintParkBorder.setStrokeWidth(0.75f * density);
 
-        // Major Streets (Clean Slate 700 - BUTT & MITER for high FPS GPU throughput)
+        // Major Streets (Clean Slate 600 - BUTT & MITER for high FPS GPU throughput)
         paintStreetMajor.setColor(COLOR_STREET_MAJOR);
         paintStreetMajor.setStyle(Paint.Style.STROKE);
-        paintStreetMajor.setStrokeWidth(2.0f * density);
+        paintStreetMajor.setStrokeWidth(1.5f * density);
         paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
         paintStreetMajor.setStrokeJoin(Paint.Join.MITER);
 
-        // Minor Streets (Subtle Hairline Slate 400 - BUTT & MITER for high FPS GPU throughput)
+        // Minor Streets (Subtle Hairline Slate 300 - BUTT & MITER for high FPS GPU throughput)
         paintStreetMinor.setColor(COLOR_STREET_MINOR);
         paintStreetMinor.setStyle(Paint.Style.STROKE);
-        paintStreetMinor.setStrokeWidth(1.1f * density);
+        paintStreetMinor.setStrokeWidth(0.75f * density);
         paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
         paintStreetMinor.setStrokeJoin(Paint.Join.MITER);
 
@@ -307,6 +308,9 @@ public class MontrealBenchMapView extends View {
 
         paintBenchPark.setColor(COLOR_BENCH_PARK);
         paintBenchPark.setStyle(Paint.Style.FILL);
+
+        paintBenchHalo.setColor(COLOR_WHITE);
+        paintBenchHalo.setStyle(Paint.Style.FILL);
 
         // Selected Bench Rings
         paintBenchSelected.setColor(COLOR_SWISS_RED);
@@ -820,32 +824,51 @@ public class MontrealBenchMapView extends View {
                 }
                 pathPoly.close();
                 canvas.drawPath(pathPoly, paintPark);
-                if (sc > 180000f) {
+                if (sc > 220000f) {
                     canvas.drawPath(pathPoly, paintParkBorder);
                 }
             }
 
             // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
-            if (sc > 150000f && minorGrid != null) {
-                float minorWidth = (sc > 400000f) ? (1.3f * density) : (0.95f * density);
+            // Clutter-free island overview: only reveal minor streets when zooming into neighbourhoods
+            if (sc > 340000f && minorGrid != null) {
+                float minorWidth = (sc > 800000f) ? (1.0f * density) : (0.75f * density);
                 paintStreetMinor.setStrokeWidth(minorWidth);
                 minorGrid.drawVisible(canvas, lineBuffer, paintStreetMinor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
             }
 
-            // 5. Major Streets (Spatially indexed batch lines across all zooms)
+            // 5. Major Streets (Spatially indexed arterial lines across all zooms)
             if (majorGrid != null) {
-                float majorWidth = (sc > 600000f) ? (2.4f * density)
-                        : ((sc > 200000f) ? (1.8f * density) : (1.3f * density));
+                float majorWidth = (sc > 600000f) ? (2.2f * density)
+                        : ((sc > 240000f) ? (1.5f * density) : (1.1f * density));
                 paintStreetMajor.setStrokeWidth(majorWidth);
                 majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
             }
 
-            // 6. Benches (Dynamic LOD with Uniform Spatial Grid)
-            float benchRadius = (sc > 1800000f) ? (5.0f * density)
-                    : ((sc > 600000f) ? (3.6f * density)
-                    : ((sc > 220000f) ? (2.5f * density) : (1.8f * density)));
+            // 6. Benches (Progressive Density LOD & Halo Badges)
+            int step;
+            float benchRadius;
+            boolean drawHalo = false;
 
-            int step = (sc < 85000f) ? 4 : ((sc < 160000f) ? 2 : 1);
+            if (sc < 120000f) {
+                step = 16;
+                benchRadius = 1.3f * density;
+            } else if (sc < 260000f) {
+                step = 6;
+                benchRadius = 1.9f * density;
+            } else if (sc < 520000f) {
+                step = 2;
+                benchRadius = 2.5f * density;
+            } else if (sc < 1200000f) {
+                step = 1;
+                benchRadius = 3.4f * density;
+                drawHalo = true;
+            } else {
+                step = 1;
+                benchRadius = 4.8f * density;
+                drawHalo = true;
+            }
+
             visibleBenches.clear();
             if (spatialIndex != null) {
                 double viewMinLon = Math.toDegrees(viewMinX);
@@ -859,18 +882,22 @@ public class MontrealBenchMapView extends View {
                     Bench b = visibleBenches.get(i);
                     float bx = halfW + (float) ((b.mercX - cX) * sc);
                     float by = halfH - (float) ((b.mercY - cY) * sc);
+                    if (drawHalo) {
+                        canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchHalo);
+                    }
                     canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
                 }
             }
 
-            // 7. Selected Bench Highlight Ring
+            // 7. Selected Bench Highlight (Swiss Concentric Rings)
             if (selectedBench != null) {
                 float bx = halfW + (float) ((selectedBench.mercX - cX) * sc);
                 float by = halfH - (float) ((selectedBench.mercY - cY) * sc);
+                float selRadius = Math.max(benchRadius, 4.0f * density);
 
-                canvas.drawCircle(bx, by, benchRadius + 7.5f * density, paintBenchSelected);
-                canvas.drawCircle(bx, by, benchRadius + 4.0f * density, paintBenchSelectedGap);
-                canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchSelectedCore);
+                canvas.drawCircle(bx, by, selRadius + 8.0f * density, paintBenchSelected);
+                canvas.drawCircle(bx, by, selRadius + 4.5f * density, paintBenchSelectedGap);
+                canvas.drawCircle(bx, by, selRadius + 1.5f * density, paintBenchSelectedCore);
             }
         }
 
