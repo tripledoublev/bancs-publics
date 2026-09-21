@@ -206,13 +206,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         this.isDarkMode = darkMode;
         benchMapView.setDarkMode(darkMode);
 
-        int bgCard = darkMode ? Color.parseColor("#161F30") : Color.parseColor("#FFFFFF");
-        int borderCard = darkMode ? Color.parseColor("#253349") : Color.parseColor("#E2E8F0");
-        int textPrimary = darkMode ? Color.parseColor("#F8FAFC") : Color.parseColor("#0F172A");
-        int textMuted = Color.parseColor("#94A3B8");
-        int chipBg = darkMode ? Color.parseColor("#1E293B") : Color.parseColor("#F1F5F9");
-        int chipStroke = darkMode ? Color.parseColor("#253349") : Color.parseColor("#E2E8F0");
-        int chipText = darkMode ? Color.parseColor("#CBD5E1") : Color.parseColor("#475569");
+        int bgCard = darkMode ? Color.parseColor("#16171B") : Color.parseColor("#FFFFFF");
+        int borderCard = darkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int textPrimary = darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textMuted = darkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int chipBg = darkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+        int chipStroke = darkMode ? Color.parseColor("#2C303B") : Color.parseColor("#E4E7EC");
+        int chipText = darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#344054");
         float d = getResources().getDisplayMetrics().density;
 
         // 1. Header Card
@@ -237,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (btnThemeToggle != null) {
             btnThemeToggle.setImageResource(darkMode ? R.drawable.ic_theme_sun : R.drawable.ic_theme_moon);
-            btnThemeToggle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#FBBF24") : Color.parseColor("#0F172A")));
+            btnThemeToggle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F59E0B") : Color.parseColor("#111318")));
         }
 
         // 2. Bottom Floating Controls
@@ -323,10 +323,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             GradientDrawable distD = new GradientDrawable();
             distD.setShape(GradientDrawable.RECTANGLE);
             distD.setCornerRadius(12f * d);
-            distD.setColor(darkMode ? Color.parseColor("#311417") : Color.parseColor("#FEE2E2"));
-            distD.setStroke((int) (1f * d), darkMode ? Color.parseColor("#501B20") : Color.parseColor("#FECACA"));
+            distD.setColor(darkMode ? Color.parseColor("#2E1214") : Color.parseColor("#FEF3F2"));
+            distD.setStroke((int) (1f * d), darkMode ? Color.parseColor("#481B1F") : Color.parseColor("#FECDCA"));
             tvBenchDistance.setBackground(distD);
-            tvBenchDistance.setTextColor(darkMode ? Color.parseColor("#FF6B6B") : Color.parseColor("#DE3831"));
+            tvBenchDistance.setTextColor(darkMode ? Color.parseColor("#FF6467") : Color.parseColor("#D92D20"));
         }
 
         // Share button

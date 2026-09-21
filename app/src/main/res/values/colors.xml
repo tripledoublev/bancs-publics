@@ -3,15 +3,15 @@
     <!-- Light Mode - Nordic Paper & Ink -->
     <color name="bg_light">#F5F5F7</color>
     <color name="bg_card">#FFFFFF</color>
-    <color name="card_border">#E5E5E5</color>
+    <color name="card_border">#E4E7EC</color>
     <color name="swiss_red">#E52B35</color>
     <color name="swiss_black">#121212</color>
     <color name="bench_park">#2B7A4B</color>
     <color name="bench_street">#121212</color>
-    <color name="text_primary">#121212</color>
-    <color name="text_secondary">#5C5C5C</color>
-    <color name="text_muted">#8E8E93</color>
-    <color name="chip_bg">#F0F0F0</color>
+    <color name="text_primary">#111318</color>
+    <color name="text_secondary">#667085</color>
+    <color name="text_muted">#667085</color>
+    <color name="chip_bg">#F2F4F7</color>
 
     <!-- Legacy compatibility aliases -->
     <color name="bench_amber">#E52B35</color>
