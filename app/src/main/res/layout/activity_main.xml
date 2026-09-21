@@ -93,14 +93,103 @@
                     android:fontFamily="sans-serif-medium" />
 
                 <ImageView
+                    android:id="@+id/btn_meetup"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Rendez-vous à mi-chemin"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_meetup" />
+
+                <ImageView
                     android:id="@+id/btn_theme_toggle"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mode sombre"
                     android:padding="6dp"
                     android:src="@drawable/ic_theme_moon" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Rendez-vous Active Status Banner -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_meetup_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeColor="#3B82F6"
+            app:strokeWidth="1.5dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/dot_blue"
+                    android:layout_marginEnd="10dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_meetup_banner_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🤝 RENDEZ-VOUS ACTIF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.04"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="#2563EB" />
+
+                    <TextView
+                        android:id="@+id/tv_meetup_banner_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ami à 3,2 km • 15 bancs à mi-chemin"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_meetup_cycle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="SUIVANT"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="8dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:layout_marginEnd="4dp" />
+
+                <ImageView
+                    android:id="@+id/btn_meetup_close"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:contentDescription="Quitter le mode rendez-vous"
+                    app:tint="@color/text_muted" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

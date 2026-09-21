@@ -22,6 +22,11 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - 🧭 **Le plus proche (Nearest Bench)**: Instant Euclidean k-NN search to locate your closest seat.
   - 📍 **Turn-by-turn Walking Directions**: One-tap intent to start pedestrian navigation in OsmAnd, Organic Maps, or Google Maps.
   - ↗ **Share Coordinates**: Easy Swiss card formatting to share meeting points.
+- **🤝 Rendez-vous à mi-chemin (Local & Anonymous Social Meetup)**:
+  - **Zero-Cloud Location Keys**: Friends export/import an obfuscated, scrambled token (e.g. `BM1-7K9P-X4W2-9D`) via Signal, WhatsApp, or SMS with **zero servers, zero accounts, and zero cloud tracking**.
+  - **Privacy Blur Levels**: Choose exact coordinates, subtle ~150 m street blur, or ~300 m neighborhood blur to protect home address privacy.
+  - **Fair Halfway Filtering**: Mathematical fairness algorithm finds candidate benches located at the exact halfway midpoint between both friends, minimizing walking time disparity.
+  - **Interactive Meetup Mode**: Live geodesic connecting axis, Cobalt Blue friend pin, glowing amber candidate halos, and real-time travel comparison (`Vous: 1,4 km • Ami: 1,4 km (Écart: 20 m)`).
 - **Compass & Orientation Cone**: Native hardware rotation vector sensor drives real-time walking heading and location accuracy halos.
 - **100% Private & Open Source**: No tracking, no analytics, no ads, no cloud accounts, and no Google Play Services dependencies.
 
