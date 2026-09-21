@@ -537,9 +537,13 @@ public class MontrealBenchMapView extends View {
     }
 
     public int getFilteredCount() {
+        return getCountForFilter(currentFilter);
+    }
+
+    public int getCountForFilter(int filter) {
         SpatialBenchIndex index = this.spatialIndex;
         if (index != null) {
-            return index.countForFilter(currentFilter);
+            return index.countForFilter(filter);
         }
         return 0;
     }

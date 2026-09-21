@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,6 +32,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -46,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private static final int PERMISSION_REQ_CODE = 101;
 
     private MontrealBenchMapView benchMapView;
+    private View layoutHeader;
+    private View layoutBottomControls;
     private TextView tvBenchCounter;
 
     // Filter Chips
@@ -108,6 +114,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
 
         bindViews();
+        setupWindowInsets();
         setupFilters();
         setupActions();
 
@@ -117,6 +124,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
     private void bindViews() {
         benchMapView = findViewById(R.id.bench_map_view);
+        layoutHeader = findViewById(R.id.layout_header);
+        layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
 
         chipFilterAll = findViewById(R.id.chip_filter_all);
@@ -139,6 +148,37 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         btnCloseDetail = findViewById(R.id.btn_close_detail);
         btnNavigate = findViewById(R.id.btn_navigate);
         btnShare = findViewById(R.id.btn_share);
+    }
+
+    private void setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, windowInsets) -> {
+            Insets statusInsets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
+            Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+
+            float d = getResources().getDisplayMetrics().density;
+            if (layoutHeader != null) {
+                layoutHeader.setPadding(
+                        layoutHeader.getPaddingLeft(),
+                        statusInsets.top + (int) (8 * d),
+                        layoutHeader.getPaddingRight(),
+                        layoutHeader.getPaddingBottom()
+                );
+            }
+
+            if (cardDetail != null && cardDetail.getLayoutParams() instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams cardLp = (FrameLayout.LayoutParams) cardDetail.getLayoutParams();
+                cardLp.bottomMargin = navInsets.bottom + (int) (14 * d);
+                cardDetail.setLayoutParams(cardLp);
+            }
+
+            if (layoutBottomControls != null && layoutBottomControls.getLayoutParams() instanceof FrameLayout.LayoutParams) {
+                FrameLayout.LayoutParams btnLp = (FrameLayout.LayoutParams) layoutBottomControls.getLayoutParams();
+                btnLp.bottomMargin = navInsets.bottom + (int) (20 * d);
+                layoutBottomControls.setLayoutParams(btnLp);
+            }
+
+            return windowInsets;
+        });
     }
 
     private void setupFilters() {
@@ -178,6 +218,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         int count = benchMapView.getFilteredCount();
         String formatted = String.format(Locale.CANADA_FRENCH, "%,d BANCS", count).replace(',', ' ');
         tvBenchCounter.setText(formatted);
+    }
+
+    private String formatCount(int num) {
+        return String.format(Locale.CANADA_FRENCH, "%,d", num).replace(',', ' ');
     }
 
     private void setupActions() {
@@ -232,6 +276,14 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     public void onMapLoaded(int totalBenches) {
         runOnUiThread(() -> {
             updateCounterDisplay();
+            int parkCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_PARKS);
+            int backrestCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_BACKREST);
+            int woodCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_WOOD);
+
+            chipFilterAll.setText("Tous (" + formatCount(totalBenches) + ")");
+            chipFilterParks.setText("🌲 Parcs (" + formatCount(parkCount) + ")");
+            chipFilterBackrest.setText("💺 Dossier (" + formatCount(backrestCount) + ")");
+            chipFilterWood.setText("🪵 Bois (" + formatCount(woodCount) + ")");
         });
     }
 
@@ -244,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             boolean inPark = bench.isInPark();
             tvBenchName.setText(inPark ? bench.park : "Banc Public de Rue");
             tvBenchType.setText(inPark ? "Banc de parc public montréalais" : "Mobilier urbain de voirie");
-            tvBenchCoords.setText(String.format(Locale.US, "%.5f° N, %.5f° W", bench.lat, bench.lon));
+            tvBenchCoords.setText(String.format(Locale.US, "%.5f° N, %.5f° W", bench.lat, Math.abs(bench.lon)));
 
             if (distanceMeters > 0) {
                 if (distanceMeters < 1000) {
@@ -259,7 +311,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
             tagMaterial.setText("Matériau: " + bench.getFormattedMaterial());
             tagBackrest.setText("Dossier: " + bench.getFormattedBackrest());
-            tagSeats.setText(bench.seats > 0 ? (bench.seats + " places") : "Places: Standard");
+            if (bench.seats == 1) {
+                tagSeats.setText("1 place");
+            } else if (bench.seats > 1) {
+                tagSeats.setText(bench.seats + " places");
+            } else {
+                tagSeats.setText("Places: Standard");
+            }
 
             cardDetail.setVisibility(View.VISIBLE);
         });
@@ -349,7 +407,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private void startLocationUpdates() {
         try {
             if (locationManager != null) {
-                // Check both GPS and Network providers
                 if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                     locationManager.requestLocationUpdates(
                             LocationManager.GPS_PROVIDER,
@@ -367,7 +424,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                     );
                 }
 
-                // Immediate last known location fallback
                 Location bestLoc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 Location netLoc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (netLoc != null && (bestLoc == null || netLoc.getTime() > bestLoc.getTime())) {
@@ -416,7 +472,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
             long now = System.currentTimeMillis();
-            if (now - lastSensorUpdate < 60) return; // 15 Hz throttle for smooth battery preservation
+            if (now - lastSensorUpdate < 60) return; // 15 Hz throttle
             lastSensorUpdate = now;
 
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);

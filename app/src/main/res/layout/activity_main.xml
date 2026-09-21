@@ -14,6 +14,7 @@
 
     <!-- 2. Top Swiss Header & Filter Bar -->
     <LinearLayout
+        android:id="@+id/layout_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -186,6 +187,7 @@
 
     <!-- 3. Floating Action Controls (Right Bottom) -->
     <LinearLayout
+        android:id="@+id/layout_bottom_controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
