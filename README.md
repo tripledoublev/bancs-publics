@@ -58,8 +58,8 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 
 ### Clone & Build
 ```bash
-git clone https://github.com/<your-username>/BenchMap.git
-cd BenchMap
+git clone https://github.com/tripledoublev/bancs-publics.git
+cd bancs-publics
 
 # Build Debug APK
 ./gradlew assembleDebug
