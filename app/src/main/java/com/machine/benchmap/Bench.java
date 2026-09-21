@@ -11,21 +11,27 @@ public class Bench {
     public final double mercY;
     public final String park;
     public final String street;
+    public final String borough;
+    public final int addressNum; // 0 = no civic number
     public final String material;
     public final int backrest; // 1 = yes, 0 = no, -1 = unspecified
     public final int seats;
 
-    public Bench(double lat, double lon, String park, String street, String material, int backrest, int seats) {
-        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, material, backrest, seats);
+    public Bench(double lat, double lon, String park, String street, String borough, int addressNum,
+                 String material, int backrest, int seats) {
+        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, borough, addressNum, material, backrest, seats);
     }
 
-    public Bench(double lat, double lon, double mercX, double mercY, String park, String street, String material, int backrest, int seats) {
+    public Bench(double lat, double lon, double mercX, double mercY, String park, String street,
+                 String borough, int addressNum, String material, int backrest, int seats) {
         this.lat = lat;
         this.lon = lon;
         this.mercX = mercX;
         this.mercY = mercY;
         this.park = park != null ? park : "";
         this.street = street != null ? street : "";
+        this.borough = borough != null ? borough : "";
+        this.addressNum = addressNum;
         this.material = material != null ? material : "";
         this.backrest = backrest;
         this.seats = seats;
@@ -45,22 +51,44 @@ public class Bench {
         return m.contains("bois") || m.contains("wood");
     }
 
+    /**
+     * Returns the formatted civic street address (e.g. "2118 Rue du Centre" or "Rue du Centre").
+     */
+    public String getAddress() {
+        if (street.trim().isEmpty()) {
+            return "";
+        }
+        if (addressNum > 0) {
+            return addressNum + " " + street;
+        }
+        return street;
+    }
+
     public String getDisplayName() {
         if (isInPark()) {
             return park;
         }
-        if (!street.trim().isEmpty()) {
-            return street;
+        String addr = getAddress();
+        if (!addr.isEmpty()) {
+            return addr;
         }
         return "Banc Public de Rue";
     }
 
     public String getDisplaySubtitle() {
         if (isInPark()) {
-            if (!street.trim().isEmpty()) {
-                return "Parc public • Près de " + street;
+            String addr = getAddress();
+            if (!addr.isEmpty() && !borough.isEmpty()) {
+                return borough + " • Près du " + addr;
+            } else if (!borough.isEmpty()) {
+                return borough + " • Parc public";
+            } else if (!addr.isEmpty()) {
+                return "Parc public • Près de " + addr;
             }
             return "Banc de parc public";
+        }
+        if (!borough.isEmpty()) {
+            return borough + " • Montréal";
         }
         return "Banc public • Montréal";
     }

@@ -55,12 +55,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     // Floating Action Controls
     private FloatingActionButton fabMyLocation;
     private MaterialButton btnNearest;
+    private MaterialButton btnRandom;
 
     // Detail Card
     private CardView cardDetail;
     private TextView tvBenchName, tvBenchType, tvBenchDistance, tvBenchCoords;
     private TextView tagMaterial, tagBackrest, tagSeats;
-    private ImageView btnCloseDetail;
+    private ImageView btnCloseDetail, btnCardRandom;
     private MaterialButton btnNavigate, btnShare;
 
     // Hardware Services
@@ -119,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         fabMyLocation = findViewById(R.id.fab_my_location);
         btnNearest = findViewById(R.id.btn_nearest);
+        btnRandom = findViewById(R.id.btn_random);
 
         cardDetail = findViewById(R.id.card_detail);
         tvBenchName = findViewById(R.id.tv_bench_name);
@@ -129,6 +131,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         tagBackrest = findViewById(R.id.tag_backrest);
         tagSeats = findViewById(R.id.tag_seats);
         btnCloseDetail = findViewById(R.id.btn_close_detail);
+        btnCardRandom = findViewById(R.id.btn_card_random);
         btnNavigate = findViewById(R.id.btn_navigate);
         btnShare = findViewById(R.id.btn_share);
     }
@@ -183,9 +186,25 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             }
         });
 
+        btnRandom.setOnClickListener(v -> {
+            triggerHapticTick();
+            Bench rand = benchMapView.selectRandomBench();
+            if (rand == null) {
+                Toast.makeText(this, "Chargement des bancs...", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         btnCloseDetail.setOnClickListener(v -> {
             triggerHapticTick();
             benchMapView.deselectBench();
+        });
+
+        btnCardRandom.setOnClickListener(v -> {
+            triggerHapticTick();
+            Bench rand = benchMapView.selectRandomBench();
+            if (rand == null) {
+                Toast.makeText(this, "Chargement des bancs...", Toast.LENGTH_SHORT).show();
+            }
         });
 
         tvBenchCoords.setOnClickListener(v -> {
@@ -252,13 +271,21 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             }
 
             cardDetail.setVisibility(View.VISIBLE);
+            if (layoutBottomControls != null) {
+                layoutBottomControls.setVisibility(View.GONE);
+            }
         });
     }
 
     @Override
     public void onBenchDeselected() {
         this.currentlySelectedBench = null;
-        runOnUiThread(() -> cardDetail.setVisibility(View.GONE));
+        runOnUiThread(() -> {
+            cardDetail.setVisibility(View.GONE);
+            if (layoutBottomControls != null) {
+                layoutBottomControls.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     private void openNavigation(double lat, double lon) {
@@ -293,9 +320,22 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private void shareBench(Bench bench) {
         try {
             String title = bench.getDisplayName();
+            String locationDesc = !bench.borough.isEmpty() ? (title + ", " + bench.borough + " (Montréal)") : (title + " (Montréal)");
+
+            StringBuilder details = new StringBuilder();
+            details.append("Matériau: ").append(bench.getFormattedMaterial());
+            details.append(" • Dossier: ").append(bench.getFormattedBackrest());
+            if (bench.seats == 1) {
+                details.append(" • 1 place");
+            } else if (bench.seats > 1) {
+                details.append(" • ").append(bench.seats).append(" places");
+            } else {
+                details.append(" • Places: Standard");
+            }
+
             String shareText = String.format(Locale.US,
-                    "📍 %s (Montréal)\nCoordonnées: %.5f, %.5f\nhttps://maps.google.com/?q=%.5f,%.5f",
-                    title, bench.lat, bench.lon, bench.lat, bench.lon);
+                    "📍 %s\n%s\nCoordonnées: %.5f, %.5f\nhttps://maps.google.com/?q=%.5f,%.5f",
+                    locationDesc, details.toString(), bench.lat, bench.lon, bench.lat, bench.lon);
 
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
             sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);

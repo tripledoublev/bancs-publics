@@ -102,7 +102,7 @@ public class MontrealBenchMapView extends View {
     private final RectF headingArcRect = new RectF();
 
     // Reusable line batch buffer for hardware drawLines (avoids Path allocations)
-    private final float[] lineBuffer = new float[4096];
+    private final float[] lineBuffer = new float[8192];
 
     // Geographic center of Montreal (Mount Royal)
     public static final double CENTER_LAT = 45.50884;
@@ -277,19 +277,12 @@ public class MontrealBenchMapView extends View {
                     return true;
                 }
 
-                // Exact focal-point zoom invariance
+                // Exact closed-form focal-point zoom invariance and simultaneous focal pan
                 float wHalf = getWidth() * 0.5f;
                 float hHalf = getHeight() * 0.5f;
-                double scaleDiff = (1.0 / oldScale) - (1.0 / newScale);
 
-                centerMercX += (focusX - wHalf) * scaleDiff;
-                centerMercY -= (focusY - hHalf) * scaleDiff;
-
-                // Smooth focal pan during pinch with correct cartographic orientation
-                float deltaFocusX = focusX - lastFocusX;
-                float deltaFocusY = focusY - lastFocusY;
-                centerMercX -= deltaFocusX / newScale;
-                centerMercY += deltaFocusY / newScale; // Positive Y down moves center north
+                centerMercX = centerMercX + (lastFocusX - wHalf) / oldScale - (focusX - wHalf) / newScale;
+                centerMercY = centerMercY - (lastFocusY - hHalf) / oldScale + (focusY - hHalf) / newScale;
 
                 scale = newScale;
                 lastFocusX = focusX;
@@ -393,7 +386,10 @@ public class MontrealBenchMapView extends View {
 
         scaleDetector.onTouchEvent(event);
 
-        if (event.getPointerCount() == 1 && !isScaling && !scaleDetector.isInProgress()) {
+        long now = System.currentTimeMillis();
+        boolean recentlyPinched = (now - lastPointerUpTime < 350) || (now - lastScaleEndTime < 350);
+
+        if (event.getPointerCount() == 1 && !isScaling && !scaleDetector.isInProgress() && !recentlyPinched) {
             gestureDetector.onTouchEvent(event);
         }
         return true;
@@ -434,14 +430,15 @@ public class MontrealBenchMapView extends View {
                     throw new IllegalStateException("Invalid binary map header: " + magicStr);
                 }
                 int version = in.readInt();
-                if (version != 2) {
-                    throw new IllegalStateException("Expected map version 2, got: " + version);
+                if (version != 2 && version != 3) {
+                    throw new IllegalStateException("Expected map version 2 or 3, got: " + version);
                 }
 
                 // 2. String Tables
                 String[] parks = readStringTable(in);
                 String[] materials = readStringTable(in);
                 String[] streets = readStringTable(in);
+                String[] boroughs = (version >= 3) ? readStringTable(in) : new String[0];
 
                 // 3. Geometry Layers
                 List<GeometryLayer> loadedIsland = readGeometryLayers(in);
@@ -449,7 +446,7 @@ public class MontrealBenchMapView extends View {
                 List<GeometryLayer> loadedMajor = readGeometryLayers(in);
                 List<GeometryLayer> loadedMinor = readGeometryLayers(in);
 
-                // 4. Benches (with street index)
+                // 4. Benches (with street, borough, and address index)
                 int benchCount = in.readInt();
                 List<Bench> loadedBenches = new ArrayList<>(benchCount);
                 for (int i = 0; i < benchCount; i++) {
@@ -459,15 +456,18 @@ public class MontrealBenchMapView extends View {
                     float my = in.readFloat();
                     short pIdx = in.readShort();
                     short sIdx = in.readShort();
+                    short bgIdx = (version >= 3) ? in.readShort() : -1;
+                    int addrNum = (version >= 3) ? in.readUnsignedShort() : 0;
                     short mIdx = in.readShort();
                     byte backrest = in.readByte();
                     byte seats = in.readByte();
 
                     String park = (pIdx >= 0 && pIdx < parks.length) ? parks[pIdx] : "";
                     String street = (sIdx >= 0 && sIdx < streets.length) ? streets[sIdx] : "";
+                    String borough = (bgIdx >= 0 && bgIdx < boroughs.length) ? boroughs[bgIdx] : "";
                     String material = (mIdx >= 0 && mIdx < materials.length) ? materials[mIdx] : "";
 
-                    loadedBenches.add(new Bench(lat, lon, mx, my, park, street, material, backrest, seats));
+                    loadedBenches.add(new Bench(lat, lon, mx, my, park, street, borough, addrNum, material, backrest, seats));
                 }
 
                 SpatialBenchIndex newIndex = new SpatialBenchIndex(loadedBenches);
@@ -608,6 +608,22 @@ public class MontrealBenchMapView extends View {
         return nearest;
     }
 
+    public Bench selectRandomBench() {
+        synchronized (dataLock) {
+            if (allBenches.isEmpty()) return null;
+            int randIdx = (int) (Math.random() * allBenches.size());
+            Bench rand = allBenches.get(randIdx);
+            this.selectedBench = rand;
+            animateToMerc(rand.mercX, rand.mercY, 2200000f);
+            double dist = (userLocation != null) ?
+                    computeDistance(userLocation.getLatitude(), userLocation.getLongitude(), rand.lat, rand.lon) : 0;
+            if (mapListener != null) {
+                mapListener.onBenchSelected(rand, dist);
+            }
+            return rand;
+        }
+    }
+
     public void deselectBench() {
         this.selectedBench = null;
         if (mapListener != null) {
@@ -694,34 +710,25 @@ public class MontrealBenchMapView extends View {
                 }
             }
 
-            // 4. Minor Streets (Batch line rendering)
-            if (scale > 75000f) {
-                float minorWidth = (scale > 400000f) ? (1.3f * density) : (0.9f * density);
+            // 4. Minor Streets (Batch line rendering at neighbourhood zoom)
+            if (scale > 150000f) {
+                float minorWidth = (scale > 400000f) ? (1.3f * density) : (0.95f * density);
                 paintStreetMinor.setStrokeWidth(minorWidth);
                 drawLayerLines(canvas, minorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMinor);
             }
 
-            // 5. Major Streets (Batch line rendering)
+            // 5. Major Streets (Batch line rendering across all zooms)
             float majorWidth = (scale > 600000f) ? (2.4f * density)
                     : ((scale > 200000f) ? (1.8f * density) : (1.3f * density));
             paintStreetMajor.setStrokeWidth(majorWidth);
             drawLayerLines(canvas, majorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMajor);
 
-            // 6. Walk Guidance Line
-            if (userLocation != null && selectedBench != null) {
-                float ux = screenX(lonToMercatorX(userLocation.getLongitude()));
-                float uy = screenY(latToMercatorY(userLocation.getLatitude()));
-                float bx = screenX(selectedBench.mercX);
-                float by = screenY(selectedBench.mercY);
-                canvas.drawLine(ux, uy, bx, by, paintWalkLine);
-            }
-
-            // 7. Benches
+            // 6. Benches (Dynamic LOD)
             float benchRadius = (scale > 1800000f) ? (5.0f * density)
                     : ((scale > 600000f) ? (3.6f * density)
                     : ((scale > 220000f) ? (2.5f * density) : (1.8f * density)));
 
-            int step = (scale < 85000f) ? 3 : 1;
+            int step = (scale < 85000f) ? 4 : ((scale < 160000f) ? 2 : 1);
             for (int i = 0; i < allBenches.size(); i += step) {
                 Bench b = allBenches.get(i);
                 if (b.mercX < viewMinX || b.mercX > viewMaxX || b.mercY < viewMinY || b.mercY > viewMaxY) {
