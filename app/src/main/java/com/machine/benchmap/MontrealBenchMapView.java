@@ -159,18 +159,36 @@ public class MontrealBenchMapView extends View {
         }
     }
 
-    // Colors - Refined Architectural Swiss Palette
-    private static final int COLOR_WATER = Color.parseColor("#EBF1F6");         // Crisp architectural Nordic water
-    private static final int COLOR_LAND = Color.parseColor("#FFFFFF");          // Pure clean landmass
-    private static final int COLOR_SHORELINE = Color.parseColor("#CBD5E1");     // Subtle hairline perimeter
-    private static final int COLOR_PARK = Color.parseColor("#EAF5EC");         // Serene organic sage green
-    private static final int COLOR_PARK_BORDER = Color.parseColor("#A7D7B5");   // Park boundary hairline
-    private static final int COLOR_STREET_MAJOR = Color.parseColor("#475569");  // Slate 600 - elegant arterial lines
-    private static final int COLOR_STREET_MINOR = Color.parseColor("#CBD5E1");  // Slate 300 - whisper hairline residential
-    private static final int COLOR_BENCH_STREET = Color.parseColor("#1E293B");  // Swiss charcoal
-    private static final int COLOR_BENCH_PARK = Color.parseColor("#15803D");    // Forest emerald
+    // Colors - Refined Architectural Swiss Palette (Light)
+    private static final int LIGHT_WATER = Color.parseColor("#EBF1F6");         // Crisp architectural Nordic water
+    private static final int LIGHT_LAND = Color.parseColor("#FFFFFF");          // Pure clean landmass
+    private static final int LIGHT_SHORELINE = Color.parseColor("#CBD5E1");     // Subtle hairline perimeter
+    private static final int LIGHT_PARK = Color.parseColor("#EAF5EC");         // Serene organic sage green
+    private static final int LIGHT_PARK_BORDER = Color.parseColor("#A7D7B5");   // Park boundary hairline
+    private static final int LIGHT_STREET_MAJOR = Color.parseColor("#475569");  // Slate 600 - elegant arterial lines
+    private static final int LIGHT_STREET_MINOR = Color.parseColor("#CBD5E1");  // Slate 300 - whisper hairline residential
+    private static final int LIGHT_BENCH_STREET = Color.parseColor("#1E293B");  // Swiss charcoal
+    private static final int LIGHT_BENCH_PARK = Color.parseColor("#15803D");    // Forest emerald
+    private static final int LIGHT_BENCH_HALO = Color.parseColor("#FFFFFF");
+    private static final int LIGHT_BENCH_GAP = Color.parseColor("#FFFFFF");
+
+    // Nocturne Swiss Minimalist Palette (Dark / OLED)
+    private static final int DARK_WATER = Color.parseColor("#090D16");          // Deep midnight oceanic
+    private static final int DARK_LAND = Color.parseColor("#131B2A");           // Matte obsidian slate
+    private static final int DARK_SHORELINE = Color.parseColor("#1E293B");      // Subtle shoreline contour
+    private static final int DARK_PARK = Color.parseColor("#10251C");          // Nocturnal botanical emerald
+    private static final int DARK_PARK_BORDER = Color.parseColor("#193D2C");    // Park boundary hairline
+    private static final int DARK_STREET_MAJOR = Color.parseColor("#334155");   // Slate 700 - visible arterial network
+    private static final int DARK_STREET_MINOR = Color.parseColor("#1E293B");   // Deep slate - whisper neighbourhood grid
+    private static final int DARK_BENCH_STREET = Color.parseColor("#F1F5F9");   // Crisp platinum chalk dots
+    private static final int DARK_BENCH_PARK = Color.parseColor("#34D399");     // Luminous mint emerald dots
+    private static final int DARK_BENCH_HALO = Color.parseColor("#131B2A");     // Dark separation ring
+    private static final int DARK_BENCH_GAP = Color.parseColor("#131B2A");
+
     private static final int COLOR_SWISS_RED = Color.parseColor("#DE3831");
     private static final int COLOR_WHITE = Color.parseColor("#FFFFFF");
+
+    private boolean isDarkMode = false;
 
     // Paints
     private final Paint paintLand = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -273,86 +291,130 @@ public class MontrealBenchMapView extends View {
         scroller = new OverScroller(getContext());
 
         // Landmass & Coastline
-        paintLand.setColor(COLOR_LAND);
         paintLand.setStyle(Paint.Style.FILL);
 
-        paintShoreline.setColor(COLOR_SHORELINE);
         paintShoreline.setStyle(Paint.Style.STROKE);
         paintShoreline.setStrokeWidth(1.1f * density);
 
         // Parks & Green Spaces
-        paintPark.setColor(COLOR_PARK);
         paintPark.setStyle(Paint.Style.FILL);
 
-        paintParkBorder.setColor(COLOR_PARK_BORDER);
         paintParkBorder.setStyle(Paint.Style.STROKE);
         paintParkBorder.setStrokeWidth(0.75f * density);
 
-        // Major Streets (Clean Slate 600 - BUTT & MITER for high FPS GPU throughput)
-        paintStreetMajor.setColor(COLOR_STREET_MAJOR);
+        // Major Streets (Clean Slate - BUTT & MITER for high FPS GPU throughput)
         paintStreetMajor.setStyle(Paint.Style.STROKE);
         paintStreetMajor.setStrokeWidth(1.5f * density);
         paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
         paintStreetMajor.setStrokeJoin(Paint.Join.MITER);
 
-        // Minor Streets (Subtle Hairline Slate 300 - BUTT & MITER for high FPS GPU throughput)
-        paintStreetMinor.setColor(COLOR_STREET_MINOR);
+        // Minor Streets (Subtle Hairline - BUTT & MITER for high FPS GPU throughput)
         paintStreetMinor.setStyle(Paint.Style.STROKE);
         paintStreetMinor.setStrokeWidth(0.75f * density);
         paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
         paintStreetMinor.setStrokeJoin(Paint.Join.MITER);
 
         // Benches
-        paintBenchStreet.setColor(COLOR_BENCH_STREET);
         paintBenchStreet.setStyle(Paint.Style.FILL);
-
-        paintBenchPark.setColor(COLOR_BENCH_PARK);
         paintBenchPark.setStyle(Paint.Style.FILL);
-
-        paintBenchHalo.setColor(COLOR_WHITE);
         paintBenchHalo.setStyle(Paint.Style.FILL);
 
         // Selected Bench Rings
-        paintBenchSelected.setColor(COLOR_SWISS_RED);
         paintBenchSelected.setStyle(Paint.Style.STROKE);
         paintBenchSelected.setStrokeWidth(2.4f * density);
 
-        paintBenchSelectedGap.setColor(COLOR_LAND);
         paintBenchSelectedGap.setStyle(Paint.Style.STROKE);
         paintBenchSelectedGap.setStrokeWidth(2.0f * density);
 
-        paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
         paintBenchSelectedCore.setStyle(Paint.Style.FILL);
 
         // User Swiss Pin
-        paintPinFill.setColor(COLOR_SWISS_RED);
         paintPinFill.setStyle(Paint.Style.FILL);
 
-        paintPinStroke.setColor(COLOR_WHITE);
         paintPinStroke.setStyle(Paint.Style.STROKE);
         paintPinStroke.setStrokeWidth(1.8f * density);
 
-        paintPinDot.setColor(COLOR_WHITE);
         paintPinDot.setStyle(Paint.Style.FILL);
-
-        paintPinShadow.setColor(Color.argb(55, 30, 41, 59));
         paintPinShadow.setStyle(Paint.Style.FILL);
 
-        paintAccuracyFill.setColor(COLOR_SWISS_RED);
         paintAccuracyFill.setStyle(Paint.Style.FILL);
-        paintAccuracyFill.setAlpha(20);
 
-        paintAccuracyStroke.setColor(COLOR_SWISS_RED);
         paintAccuracyStroke.setStyle(Paint.Style.STROKE);
         paintAccuracyStroke.setStrokeWidth(1.0f * density);
-        paintAccuracyStroke.setAlpha(65);
 
-        paintHeadingCone.setColor(COLOR_SWISS_RED);
         paintHeadingCone.setStyle(Paint.Style.FILL);
-        paintHeadingCone.setAlpha(35);
+
+        applyThemeColors();
 
         initGestures();
         loadVectorDataBinary();
+    }
+
+    public void setDarkMode(boolean darkMode) {
+        if (this.isDarkMode == darkMode) return;
+        this.isDarkMode = darkMode;
+        applyThemeColors();
+        invalidate();
+    }
+
+    public boolean isDarkMode() {
+        return isDarkMode;
+    }
+
+    private void applyThemeColors() {
+        if (isDarkMode) {
+            paintLand.setColor(DARK_LAND);
+            paintShoreline.setColor(DARK_SHORELINE);
+            paintPark.setColor(DARK_PARK);
+            paintParkBorder.setColor(DARK_PARK_BORDER);
+            paintStreetMajor.setColor(DARK_STREET_MAJOR);
+            paintStreetMinor.setColor(DARK_STREET_MINOR);
+            paintBenchStreet.setColor(DARK_BENCH_STREET);
+            paintBenchPark.setColor(DARK_BENCH_PARK);
+            paintBenchHalo.setColor(DARK_BENCH_HALO);
+            paintBenchSelected.setColor(COLOR_SWISS_RED);
+            paintBenchSelectedGap.setColor(DARK_BENCH_GAP);
+            paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
+
+            paintPinFill.setColor(COLOR_SWISS_RED);
+            paintPinStroke.setColor(DARK_LAND);
+            paintPinDot.setColor(COLOR_WHITE);
+            paintPinShadow.setColor(Color.argb(85, 0, 0, 0));
+
+            paintAccuracyFill.setColor(COLOR_SWISS_RED);
+            paintAccuracyFill.setAlpha(25);
+            paintAccuracyStroke.setColor(COLOR_SWISS_RED);
+            paintAccuracyStroke.setAlpha(70);
+
+            paintHeadingCone.setColor(COLOR_SWISS_RED);
+            paintHeadingCone.setAlpha(40);
+        } else {
+            paintLand.setColor(LIGHT_LAND);
+            paintShoreline.setColor(LIGHT_SHORELINE);
+            paintPark.setColor(LIGHT_PARK);
+            paintParkBorder.setColor(LIGHT_PARK_BORDER);
+            paintStreetMajor.setColor(LIGHT_STREET_MAJOR);
+            paintStreetMinor.setColor(LIGHT_STREET_MINOR);
+            paintBenchStreet.setColor(LIGHT_BENCH_STREET);
+            paintBenchPark.setColor(LIGHT_BENCH_PARK);
+            paintBenchHalo.setColor(LIGHT_BENCH_HALO);
+            paintBenchSelected.setColor(COLOR_SWISS_RED);
+            paintBenchSelectedGap.setColor(LIGHT_BENCH_GAP);
+            paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
+
+            paintPinFill.setColor(COLOR_SWISS_RED);
+            paintPinStroke.setColor(COLOR_WHITE);
+            paintPinDot.setColor(COLOR_WHITE);
+            paintPinShadow.setColor(Color.argb(55, 30, 41, 59));
+
+            paintAccuracyFill.setColor(COLOR_SWISS_RED);
+            paintAccuracyFill.setAlpha(20);
+            paintAccuracyStroke.setColor(COLOR_SWISS_RED);
+            paintAccuracyStroke.setAlpha(65);
+
+            paintHeadingCone.setColor(COLOR_SWISS_RED);
+            paintHeadingCone.setAlpha(35);
+        }
     }
 
     private void initGestures() {
@@ -778,7 +840,7 @@ public class MontrealBenchMapView extends View {
         if (w <= 0 || h <= 0) return;
 
         // 1. Water Canvas Background
-        canvas.drawColor(COLOR_WATER);
+        canvas.drawColor(isDarkMode ? DARK_WATER : LIGHT_WATER);
 
         float halfW = w * 0.5f;
         float halfH = h * 0.5f;

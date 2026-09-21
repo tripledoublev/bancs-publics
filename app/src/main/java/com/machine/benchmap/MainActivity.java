@@ -27,15 +27,24 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Window;
 
 import java.util.Locale;
 
@@ -46,11 +55,19 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity implements MontrealBenchMapView.BenchMapListener, SensorEventListener {
 
     private static final int PERMISSION_REQ_CODE = 101;
+    private static final String PREFS_NAME = "benchmap_prefs";
+    private static final String PREF_DARK_MODE = "key_dark_mode";
 
     private MontrealBenchMapView benchMapView;
     private View layoutHeader;
     private View layoutBottomControls;
     private TextView tvBenchCounter;
+
+    // Header Swiss elements
+    private MaterialCardView cardHeader;
+    private TextView tvAppTitle, tvAppSubtitle;
+    private ImageView btnThemeToggle;
+    private boolean isDarkMode = false;
 
     // Floating Action Controls
     private FloatingActionButton fabMyLocation;
@@ -58,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private MaterialButton btnRandom;
 
     // Detail Card
-    private CardView cardDetail;
+    private MaterialCardView cardDetail;
     private TextView tvBenchName, tvBenchType, tvBenchDistance, tvBenchCoords;
     private TextView tagMaterial, tagBackrest, tagSeats;
     private ImageView btnCloseDetail, btnCardRandom;
@@ -95,6 +112,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Window window = getWindow();
+        WindowCompat.setDecorFitsSystemWindows(window, false);
+        window.setStatusBarColor(Color.TRANSPARENT);
+        window.setNavigationBarColor(Color.TRANSPARENT);
+
         setContentView(R.layout.activity_main);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -106,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         bindViews();
         setupWindowInsets();
+        initTheme();
         setupActions();
 
         benchMapView.setMapListener(this);
@@ -115,8 +139,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private void bindViews() {
         benchMapView = findViewById(R.id.bench_map_view);
         layoutHeader = findViewById(R.id.layout_header);
+        cardHeader = findViewById(R.id.card_header);
+        tvAppTitle = findViewById(R.id.tv_app_title);
+        tvAppSubtitle = findViewById(R.id.tv_app_subtitle);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
+        btnThemeToggle = findViewById(R.id.btn_theme_toggle);
 
         fabMyLocation = findViewById(R.id.fab_my_location);
         btnNearest = findViewById(R.id.btn_nearest);
@@ -137,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     }
 
     private void setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, windowInsets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, windowInsets) -> {
             Insets statusInsets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
             Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
 
@@ -167,7 +195,169 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         });
     }
 
+    private void initTheme() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean defaultDark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        boolean initialDark = prefs.getBoolean(PREF_DARK_MODE, defaultDark);
+        applyTheme(initialDark);
+    }
+
+    private void applyTheme(boolean darkMode) {
+        this.isDarkMode = darkMode;
+        benchMapView.setDarkMode(darkMode);
+
+        int bgCard = darkMode ? Color.parseColor("#161F30") : Color.parseColor("#FFFFFF");
+        int borderCard = darkMode ? Color.parseColor("#253349") : Color.parseColor("#E2E8F0");
+        int textPrimary = darkMode ? Color.parseColor("#F8FAFC") : Color.parseColor("#0F172A");
+        int textMuted = Color.parseColor("#94A3B8");
+        int chipBg = darkMode ? Color.parseColor("#1E293B") : Color.parseColor("#F1F5F9");
+        int chipStroke = darkMode ? Color.parseColor("#253349") : Color.parseColor("#E2E8F0");
+        int chipText = darkMode ? Color.parseColor("#CBD5E1") : Color.parseColor("#475569");
+        float d = getResources().getDisplayMetrics().density;
+
+        // 1. Header Card
+        if (cardHeader != null) {
+            cardHeader.setCardBackgroundColor(bgCard);
+            cardHeader.setStrokeColor(borderCard);
+        }
+        if (tvAppTitle != null) {
+            tvAppTitle.setTextColor(textPrimary);
+        }
+        if (tvAppSubtitle != null) {
+            tvAppSubtitle.setTextColor(textMuted);
+        }
+        if (tvBenchCounter != null) {
+            GradientDrawable counterDrawable = new GradientDrawable();
+            counterDrawable.setShape(GradientDrawable.RECTANGLE);
+            counterDrawable.setCornerRadius(12f * d);
+            counterDrawable.setColor(chipBg);
+            counterDrawable.setStroke((int) (1f * d), borderCard);
+            tvBenchCounter.setBackground(counterDrawable);
+            tvBenchCounter.setTextColor(textPrimary);
+        }
+        if (btnThemeToggle != null) {
+            btnThemeToggle.setImageResource(darkMode ? R.drawable.ic_theme_sun : R.drawable.ic_theme_moon);
+            btnThemeToggle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#FBBF24") : Color.parseColor("#0F172A")));
+        }
+
+        // 2. Bottom Floating Controls
+        if (fabMyLocation != null) {
+            fabMyLocation.setBackgroundTintList(ColorStateList.valueOf(bgCard));
+            fabMyLocation.setImageTintList(ColorStateList.valueOf(textPrimary));
+        }
+        if (btnRandom != null) {
+            btnRandom.setBackgroundColor(bgCard);
+            btnRandom.setTextColor(textPrimary);
+            btnRandom.setStrokeColor(ColorStateList.valueOf(borderCard));
+        }
+        if (btnNearest != null) {
+            btnNearest.setBackgroundColor(darkMode ? Color.parseColor("#F8FAFC") : Color.parseColor("#0F172A"));
+            btnNearest.setTextColor(darkMode ? Color.parseColor("#0F172A") : Color.parseColor("#FFFFFF"));
+        }
+
+        // 3. Detail Card
+        if (cardDetail != null) {
+            cardDetail.setCardBackgroundColor(bgCard);
+            cardDetail.setStrokeColor(borderCard);
+        }
+        if (tvBenchName != null) {
+            tvBenchName.setTextColor(textPrimary);
+        }
+        if (tvBenchType != null) {
+            tvBenchType.setTextColor(textMuted);
+        }
+        if (tvBenchCoords != null) {
+            tvBenchCoords.setTextColor(textMuted);
+        }
+
+        // Circle Buttons
+        GradientDrawable circleBtn1 = new GradientDrawable();
+        circleBtn1.setShape(GradientDrawable.OVAL);
+        circleBtn1.setColor(chipBg);
+        if (btnCloseDetail != null) {
+            btnCloseDetail.setBackground(circleBtn1);
+            btnCloseDetail.setImageTintList(ColorStateList.valueOf(textMuted));
+        }
+
+        GradientDrawable circleBtn2 = new GradientDrawable();
+        circleBtn2.setShape(GradientDrawable.OVAL);
+        circleBtn2.setColor(chipBg);
+        if (btnCardRandom != null) {
+            btnCardRandom.setBackground(circleBtn2);
+            btnCardRandom.setImageTintList(ColorStateList.valueOf(textMuted));
+        }
+
+        // Attribute Chips
+        GradientDrawable d1 = new GradientDrawable();
+        d1.setShape(GradientDrawable.RECTANGLE);
+        d1.setCornerRadius(10f * d);
+        d1.setColor(chipBg);
+        d1.setStroke((int) (1f * d), chipStroke);
+        if (tagMaterial != null) {
+            tagMaterial.setBackground(d1);
+            tagMaterial.setTextColor(chipText);
+        }
+
+        GradientDrawable d2 = new GradientDrawable();
+        d2.setShape(GradientDrawable.RECTANGLE);
+        d2.setCornerRadius(10f * d);
+        d2.setColor(chipBg);
+        d2.setStroke((int) (1f * d), chipStroke);
+        if (tagBackrest != null) {
+            tagBackrest.setBackground(d2);
+            tagBackrest.setTextColor(chipText);
+        }
+
+        GradientDrawable d3 = new GradientDrawable();
+        d3.setShape(GradientDrawable.RECTANGLE);
+        d3.setCornerRadius(10f * d);
+        d3.setColor(chipBg);
+        d3.setStroke((int) (1f * d), chipStroke);
+        if (tagSeats != null) {
+            tagSeats.setBackground(d3);
+            tagSeats.setTextColor(chipText);
+        }
+
+        // Distance chip in detail card
+        if (tvBenchDistance != null) {
+            GradientDrawable distD = new GradientDrawable();
+            distD.setShape(GradientDrawable.RECTANGLE);
+            distD.setCornerRadius(12f * d);
+            distD.setColor(darkMode ? Color.parseColor("#311417") : Color.parseColor("#FEE2E2"));
+            distD.setStroke((int) (1f * d), darkMode ? Color.parseColor("#501B20") : Color.parseColor("#FECACA"));
+            tvBenchDistance.setBackground(distD);
+            tvBenchDistance.setTextColor(darkMode ? Color.parseColor("#FF6B6B") : Color.parseColor("#DE3831"));
+        }
+
+        // Share button
+        if (btnShare != null) {
+            btnShare.setBackgroundColor(chipBg);
+            btnShare.setTextColor(textPrimary);
+            btnShare.setStrokeColor(ColorStateList.valueOf(borderCard));
+        }
+
+        // 4. Status Bar & Navigation Bar Appearance
+        try {
+            Window window = getWindow();
+            WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, window.getDecorView());
+            if (controller != null) {
+                controller.setAppearanceLightStatusBars(!darkMode);
+                controller.setAppearanceLightNavigationBars(!darkMode);
+            }
+        } catch (Exception ignored) {}
+    }
+
     private void setupActions() {
+        btnThemeToggle.setOnClickListener(v -> {
+            triggerHapticTick();
+            boolean newMode = !isDarkMode;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(PREF_DARK_MODE, newMode)
+                    .apply();
+            applyTheme(newMode);
+        });
+
         fabMyLocation.setOnClickListener(v -> {
             triggerHapticTick();
             if (lastLocation != null) {
@@ -267,7 +457,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             } else if (bench.seats > 1) {
                 tagSeats.setText(bench.seats + " places");
             } else {
-                tagSeats.setText("Places: Standard");
+                tagSeats.setText("Places: 2–3 (standard)");
             }
 
             cardDetail.setVisibility(View.VISIBLE);
@@ -322,7 +512,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             String title = bench.getDisplayName();
             String locationDesc = !bench.borough.isEmpty() ? (title + ", " + bench.borough + " (Montréal)") : (title + " (Montréal)");
 
-            String seatsStr = (bench.seats == 1) ? "1 place" : ((bench.seats > 1) ? (bench.seats + " places") : "Standard");
+            String seatsStr = (bench.seats == 1) ? "1 place" : ((bench.seats > 1) ? (bench.seats + " places") : "2–3 places (standard)");
 
             StringBuilder sb = new StringBuilder();
             sb.append("📍 ").append(locationDesc).append("\n");
