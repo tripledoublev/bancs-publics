@@ -9,11 +9,6 @@ import java.util.List;
  */
 public class SpatialBenchIndex {
 
-    public static final int FILTER_ALL = 0;
-    public static final int FILTER_PARKS = 1;
-    public static final int FILTER_BACKREST = 2;
-    public static final int FILTER_WOOD = 3;
-
     private static final double MIN_LAT = 45.38;
     private static final double MAX_LAT = 45.72;
     private static final double MIN_LON = -74.00;
@@ -56,29 +51,8 @@ public class SpatialBenchIndex {
         return (int) ((lon - MIN_LON) / CELL_SIZE_DEG);
     }
 
-    public static boolean matchesFilter(Bench b, int filter) {
-        switch (filter) {
-            case FILTER_PARKS:
-                return b.isInPark();
-            case FILTER_BACKREST:
-                return b.hasBackrest();
-            case FILTER_WOOD:
-                return b.isWood();
-            case FILTER_ALL:
-            default:
-                return true;
-        }
-    }
-
-    public int countForFilter(int filter) {
-        if (filter == FILTER_ALL) return allBenches.size();
-        int count = 0;
-        for (Bench b : allBenches) {
-            if (matchesFilter(b, filter)) {
-                count++;
-            }
-        }
-        return count;
+    public int getTotalCount() {
+        return allBenches.size();
     }
 
     public List<Bench> getAllBenches() {
@@ -88,8 +62,7 @@ public class SpatialBenchIndex {
     /**
      * Fast tap hit-testing within a pixel radius in Mercator space.
      */
-    public Bench findTapHit(double mercX, double mercY, double searchRadiusMerc, int filter) {
-        // Convert Mercator to approximate lat/lon
+    public Bench findTapHit(double mercX, double mercY, double searchRadiusMerc) {
         double lon = Math.toDegrees(mercX);
         double lat = Math.toDegrees(2.0 * Math.atan(Math.exp(mercY)) - Math.PI / 2.0);
 
@@ -105,8 +78,6 @@ public class SpatialBenchIndex {
                 List<Bench> cell = grid[r][c];
                 for (int i = 0; i < cell.size(); i++) {
                     Bench b = cell.get(i);
-                    if (!matchesFilter(b, filter)) continue;
-
                     double dx = b.mercX - mercX;
                     double dy = b.mercY - mercY;
                     double dSq = dx * dx + dy * dy;
@@ -121,10 +92,9 @@ public class SpatialBenchIndex {
     }
 
     /**
-     * Finds nearest bench to the given lat/lon using spiral search.
-     * Guaranteed exact result, completed in microseconds.
+     * Finds nearest bench to the given lat/lon using spiral ring search with distance pruning.
      */
-    public Bench findNearest(double userLat, double userLon, int filter) {
+    public Bench findNearest(double userLat, double userLon) {
         int centerR = Math.max(0, Math.min(numRows - 1, getRow(userLat)));
         int centerC = Math.max(0, Math.min(numCols - 1, getCol(userLon)));
 
@@ -143,7 +113,6 @@ public class SpatialBenchIndex {
 
             for (int r = minR; r <= maxR; r++) {
                 for (int c = minC; c <= maxC; c++) {
-                    // Only visit border of the ring
                     if (ring > 0 && (r > minR && r < maxR) && (c > minC && c < maxC)) {
                         continue;
                     }
@@ -152,8 +121,6 @@ public class SpatialBenchIndex {
                     List<Bench> cell = grid[r][c];
                     for (int i = 0; i < cell.size(); i++) {
                         Bench b = cell.get(i);
-                        if (!matchesFilter(b, filter)) continue;
-
                         double d = MontrealBenchMapView.computeDistance(userLat, userLon, b.lat, b.lon);
                         if (d < bestMeters) {
                             bestMeters = d;
@@ -163,12 +130,9 @@ public class SpatialBenchIndex {
                 }
             }
 
-            // Pruning check:
-            // If we found a bench in or before this ring, and best distance in meters is less than
-            // the distance from user to the next ring boundary, no outer ring can possibly beat it!
             if (best != null) {
                 double nextRingDeg = ring * CELL_SIZE_DEG;
-                double approxMinDistToNextRing = nextRingDeg * 80000.0; // conservative meters per degree
+                double approxMinDistToNextRing = nextRingDeg * 80000.0;
                 if (bestMeters < approxMinDistToNextRing) {
                     break;
                 }
@@ -177,10 +141,8 @@ public class SpatialBenchIndex {
             if (!checkedAny && ring > 5) break;
         }
 
-        // Fallback safety check if spiral was too constrained
         if (best == null) {
             for (Bench b : allBenches) {
-                if (!matchesFilter(b, filter)) continue;
                 double d = MontrealBenchMapView.computeDistance(userLat, userLon, b.lat, b.lon);
                 if (d < bestMeters) {
                     bestMeters = d;

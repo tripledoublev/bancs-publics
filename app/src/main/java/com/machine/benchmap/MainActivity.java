@@ -7,8 +7,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -43,7 +41,7 @@ import java.util.Locale;
 
 /**
  * MainActivity - Montreal BenchMap v0.1.0
- * Minimalist Swiss UX, interactive filters, compass orientation, and fast navigation.
+ * Pure Swiss cartographic experience with exact street names and zero-clutter layout.
  */
 public class MainActivity extends AppCompatActivity implements MontrealBenchMapView.BenchMapListener, SensorEventListener {
 
@@ -53,13 +51,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private View layoutHeader;
     private View layoutBottomControls;
     private TextView tvBenchCounter;
-
-    // Filter Chips
-    private MaterialButton chipFilterAll;
-    private MaterialButton chipFilterParks;
-    private MaterialButton chipFilterBackrest;
-    private MaterialButton chipFilterWood;
-    private MaterialButton[] filterChips;
 
     // Floating Action Controls
     private FloatingActionButton fabMyLocation;
@@ -80,7 +71,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
     private Location lastLocation = null;
     private Bench currentlySelectedBench = null;
-    private int currentFilter = SpatialBenchIndex.FILTER_ALL;
 
     // Compass calculations
     private final float[] rotationMatrix = new float[9];
@@ -115,7 +105,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         bindViews();
         setupWindowInsets();
-        setupFilters();
         setupActions();
 
         benchMapView.setMapListener(this);
@@ -127,12 +116,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         layoutHeader = findViewById(R.id.layout_header);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
-
-        chipFilterAll = findViewById(R.id.chip_filter_all);
-        chipFilterParks = findViewById(R.id.chip_filter_parks);
-        chipFilterBackrest = findViewById(R.id.chip_filter_backrest);
-        chipFilterWood = findViewById(R.id.chip_filter_wood);
-        filterChips = new MaterialButton[]{chipFilterAll, chipFilterParks, chipFilterBackrest, chipFilterWood};
 
         fabMyLocation = findViewById(R.id.fab_my_location);
         btnNearest = findViewById(R.id.btn_nearest);
@@ -181,49 +164,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         });
     }
 
-    private void setupFilters() {
-        chipFilterAll.setOnClickListener(v -> selectFilter(SpatialBenchIndex.FILTER_ALL, chipFilterAll));
-        chipFilterParks.setOnClickListener(v -> selectFilter(SpatialBenchIndex.FILTER_PARKS, chipFilterParks));
-        chipFilterBackrest.setOnClickListener(v -> selectFilter(SpatialBenchIndex.FILTER_BACKREST, chipFilterBackrest));
-        chipFilterWood.setOnClickListener(v -> selectFilter(SpatialBenchIndex.FILTER_WOOD, chipFilterWood));
-    }
-
-    private void selectFilter(int filterMode, MaterialButton selectedBtn) {
-        triggerHapticTick();
-        this.currentFilter = filterMode;
-
-        int activeBg = ContextCompat.getColor(this, R.color.swiss_black);
-        int inactiveBg = ContextCompat.getColor(this, R.color.bg_card);
-        int activeText = Color.WHITE;
-        int inactiveText = ContextCompat.getColor(this, R.color.text_secondary);
-        int inactiveBorder = ContextCompat.getColor(this, R.color.card_border);
-
-        for (MaterialButton btn : filterChips) {
-            if (btn == selectedBtn) {
-                btn.setBackgroundTintList(ColorStateList.valueOf(activeBg));
-                btn.setTextColor(activeText);
-                btn.setStrokeColor(ColorStateList.valueOf(activeBg));
-            } else {
-                btn.setBackgroundTintList(ColorStateList.valueOf(inactiveBg));
-                btn.setTextColor(inactiveText);
-                btn.setStrokeColor(ColorStateList.valueOf(inactiveBorder));
-            }
-        }
-
-        benchMapView.setFilter(filterMode);
-        updateCounterDisplay();
-    }
-
-    private void updateCounterDisplay() {
-        int count = benchMapView.getFilteredCount();
-        String formatted = String.format(Locale.CANADA_FRENCH, "%,d BANCS", count).replace(',', ' ');
-        tvBenchCounter.setText(formatted);
-    }
-
-    private String formatCount(int num) {
-        return String.format(Locale.CANADA_FRENCH, "%,d", num).replace(',', ' ');
-    }
-
     private void setupActions() {
         fabMyLocation.setOnClickListener(v -> {
             triggerHapticTick();
@@ -239,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             triggerHapticTick();
             Bench nearest = benchMapView.findNearestBench();
             if (nearest == null) {
-                Toast.makeText(this, "Aucun banc correspondant au filtre actuel", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Aucun banc trouvé", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -275,15 +215,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     @Override
     public void onMapLoaded(int totalBenches) {
         runOnUiThread(() -> {
-            updateCounterDisplay();
-            int parkCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_PARKS);
-            int backrestCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_BACKREST);
-            int woodCount = benchMapView.getCountForFilter(SpatialBenchIndex.FILTER_WOOD);
-
-            chipFilterAll.setText("Tous (" + formatCount(totalBenches) + ")");
-            chipFilterParks.setText("🌲 Parcs (" + formatCount(parkCount) + ")");
-            chipFilterBackrest.setText("💺 Dossier (" + formatCount(backrestCount) + ")");
-            chipFilterWood.setText("🪵 Bois (" + formatCount(woodCount) + ")");
+            String formatted = String.format(Locale.CANADA_FRENCH, "%,d BANCS", totalBenches).replace(',', ' ');
+            tvBenchCounter.setText(formatted);
         });
     }
 
@@ -293,9 +226,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         triggerHapticTick();
 
         runOnUiThread(() -> {
-            boolean inPark = bench.isInPark();
-            tvBenchName.setText(inPark ? bench.park : "Banc Public de Rue");
-            tvBenchType.setText(inPark ? "Banc de parc public montréalais" : "Mobilier urbain de voirie");
+            tvBenchName.setText(bench.getDisplayName());
+            tvBenchType.setText(bench.getDisplaySubtitle());
             tvBenchCoords.setText(String.format(Locale.US, "%.5f° N, %.5f° W", bench.lat, Math.abs(bench.lon)));
 
             if (distanceMeters > 0) {
@@ -360,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
     private void shareBench(Bench bench) {
         try {
-            String title = bench.isInPark() ? bench.park : "Banc Public de Rue";
+            String title = bench.getDisplayName();
             String shareText = String.format(Locale.US,
                     "📍 %s (Montréal)\nCoordonnées: %.5f, %.5f\nhttps://maps.google.com/?q=%.5f,%.5f",
                     title, bench.lat, bench.lon, bench.lat, bench.lon);

@@ -10,20 +10,22 @@ public class Bench {
     public final double mercX;
     public final double mercY;
     public final String park;
+    public final String street;
     public final String material;
     public final int backrest; // 1 = yes, 0 = no, -1 = unspecified
     public final int seats;
 
-    public Bench(double lat, double lon, String park, String material, int backrest, int seats) {
-        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, material, backrest, seats);
+    public Bench(double lat, double lon, String park, String street, String material, int backrest, int seats) {
+        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, material, backrest, seats);
     }
 
-    public Bench(double lat, double lon, double mercX, double mercY, String park, String material, int backrest, int seats) {
+    public Bench(double lat, double lon, double mercX, double mercY, String park, String street, String material, int backrest, int seats) {
         this.lat = lat;
         this.lon = lon;
         this.mercX = mercX;
         this.mercY = mercY;
         this.park = park != null ? park : "";
+        this.street = street != null ? street : "";
         this.material = material != null ? material : "";
         this.backrest = backrest;
         this.seats = seats;
@@ -43,11 +45,30 @@ public class Bench {
         return m.contains("bois") || m.contains("wood");
     }
 
+    public String getDisplayName() {
+        if (isInPark()) {
+            return park;
+        }
+        if (!street.trim().isEmpty()) {
+            return street;
+        }
+        return "Banc Public de Rue";
+    }
+
+    public String getDisplaySubtitle() {
+        if (isInPark()) {
+            if (!street.trim().isEmpty()) {
+                return "Parc public • Près de " + street;
+            }
+            return "Banc de parc public";
+        }
+        return "Banc public • Montréal";
+    }
+
     public String getFormattedMaterial() {
         if (material.isEmpty() || material.equalsIgnoreCase("non spécifié")) {
             return "Standard";
         }
-        // Capitalize first letter cleanly
         return material.substring(0, 1).toUpperCase() + material.substring(1);
     }
 

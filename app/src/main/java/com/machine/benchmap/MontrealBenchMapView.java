@@ -30,15 +30,13 @@ import java.util.List;
 
 /**
  * MontrealBenchMapView - v0.1.0
- * Refined Swiss-style local-first vector map engine.
+ * Refined Swiss-style local vector map engine.
  *
- * Features:
- * - Ultra-fast binary map loader (<50ms startup, zero JSON overhead)
- * - 2D Spatial Grid Indexing for O(1) tap hit-testing & nearest bench search
- * - Multimodal filter engine (All, Parks, Backrest, Wood)
- * - Hardware-accelerated Canvas with dynamic LOD & Mercator culling
+ * Highlights:
+ * - 29,708 vector street segments with OpenGL-accelerated drawLines
+ * - Zero-jump multi-touch pinch-to-zoom with exact focal point physics
+ * - 2D Spatial Grid indexing for O(1) tap hit-testing and nearest bench search
  * - Compass heading orientation cone on user Swiss pin
- * - Exact focal-point pinch-to-zoom & inertial pan physics
  */
 public class MontrealBenchMapView extends View {
 
@@ -61,16 +59,16 @@ public class MontrealBenchMapView extends View {
         }
     }
 
-    // Colors - Monotone High-Contrast Swiss Cartography
+    // Colors - Refined Architectural Swiss Palette
     private static final int COLOR_WATER = Color.parseColor("#E2E8F0");
     private static final int COLOR_LAND = Color.parseColor("#FFFFFF");
     private static final int COLOR_SHORELINE = Color.parseColor("#0F172A");
-    private static final int COLOR_PARK = Color.parseColor("#F1F5F9");
-    private static final int COLOR_PARK_BORDER = Color.parseColor("#94A3B8");
-    private static final int COLOR_STREET_MAJOR = Color.parseColor("#000000");
-    private static final int COLOR_STREET_MINOR = Color.parseColor("#475569");
-    private static final int COLOR_BENCH_STREET = Color.parseColor("#111827");
-    private static final int COLOR_BENCH_PARK = Color.parseColor("#1E3A2F");
+    private static final int COLOR_PARK = Color.parseColor("#EBF5EE");         // Serene organic sage green
+    private static final int COLOR_PARK_BORDER = Color.parseColor("#94A3B8");   // Park boundary hairline
+    private static final int COLOR_STREET_MAJOR = Color.parseColor("#334155");  // Crisp slate 700
+    private static final int COLOR_STREET_MINOR = Color.parseColor("#94A3B8");  // Subtle slate 400
+    private static final int COLOR_BENCH_STREET = Color.parseColor("#1E293B");  // Swiss charcoal
+    private static final int COLOR_BENCH_PARK = Color.parseColor("#2D6A4F");    // Emerald sage
     private static final int COLOR_SWISS_RED = Color.parseColor("#DE3831");
     private static final int COLOR_WHITE = Color.parseColor("#FFFFFF");
 
@@ -99,11 +97,12 @@ public class MontrealBenchMapView extends View {
 
     // Reusable Paths & Rects
     private final Path pathPoly = new Path();
-    private final Path pathStreetMajor = new Path();
-    private final Path pathStreetMinor = new Path();
     private final Path pinPath = new Path();
     private final Path headingPath = new Path();
     private final RectF headingArcRect = new RectF();
+
+    // Reusable line batch buffer for hardware drawLines (avoids Path allocations)
+    private final float[] lineBuffer = new float[4096];
 
     // Geographic center of Montreal (Mount Royal)
     public static final double CENTER_LAT = 45.50884;
@@ -125,6 +124,8 @@ public class MontrealBenchMapView extends View {
     private float lastFocusX, lastFocusY;
     private int lastFlingX, lastFlingY;
     private boolean isScaling = false;
+    private long lastScaleEndTime = 0;
+    private long lastPointerUpTime = 0;
 
     // Vector Data & Spatial Index
     private final Object dataLock = new Object();
@@ -137,10 +138,9 @@ public class MontrealBenchMapView extends View {
     private volatile boolean isMapReady = false;
 
     // State
-    private int currentFilter = SpatialBenchIndex.FILTER_ALL;
     private Bench selectedBench = null;
     private Location userLocation = null;
-    private float userHeadingDegrees = -1f; // -1 means unavailable
+    private float userHeadingDegrees = -1f;
     private BenchMapListener mapListener;
 
     public MontrealBenchMapView(Context context) {
@@ -176,19 +176,19 @@ public class MontrealBenchMapView extends View {
 
         paintParkBorder.setColor(COLOR_PARK_BORDER);
         paintParkBorder.setStyle(Paint.Style.STROKE);
-        paintParkBorder.setStrokeWidth(0.9f * density);
+        paintParkBorder.setStrokeWidth(0.8f * density);
 
-        // Major Boulevards & Expressways
+        // Major Streets (Clean Slate 700)
         paintStreetMajor.setColor(COLOR_STREET_MAJOR);
         paintStreetMajor.setStyle(Paint.Style.STROKE);
-        paintStreetMajor.setStrokeWidth(2.6f * density);
+        paintStreetMajor.setStrokeWidth(2.0f * density);
         paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
         paintStreetMajor.setStrokeJoin(Paint.Join.ROUND);
 
-        // Minor Arteries & Residential Streets
+        // Minor Streets (Subtle Hairline Slate 400)
         paintStreetMinor.setColor(COLOR_STREET_MINOR);
         paintStreetMinor.setStyle(Paint.Style.STROKE);
-        paintStreetMinor.setStrokeWidth(1.2f * density);
+        paintStreetMinor.setStrokeWidth(1.1f * density);
         paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
         paintStreetMinor.setStrokeJoin(Paint.Join.ROUND);
 
@@ -199,7 +199,7 @@ public class MontrealBenchMapView extends View {
         paintBenchPark.setColor(COLOR_BENCH_PARK);
         paintBenchPark.setStyle(Paint.Style.FILL);
 
-        // Selected Bench Highlight Ring
+        // Selected Bench Rings
         paintBenchSelected.setColor(COLOR_SWISS_RED);
         paintBenchSelected.setStyle(Paint.Style.STROKE);
         paintBenchSelected.setStrokeWidth(2.4f * density);
@@ -277,6 +277,7 @@ public class MontrealBenchMapView extends View {
                     return true;
                 }
 
+                // Exact focal-point zoom invariance
                 float wHalf = getWidth() * 0.5f;
                 float hHalf = getHeight() * 0.5f;
                 double scaleDiff = (1.0 / oldScale) - (1.0 / newScale);
@@ -284,10 +285,11 @@ public class MontrealBenchMapView extends View {
                 centerMercX += (focusX - wHalf) * scaleDiff;
                 centerMercY -= (focusY - hHalf) * scaleDiff;
 
+                // Smooth focal pan during pinch with correct cartographic orientation
                 float deltaFocusX = focusX - lastFocusX;
                 float deltaFocusY = focusY - lastFocusY;
                 centerMercX -= deltaFocusX / newScale;
-                centerMercY += deltaFocusY / newScale;
+                centerMercY += deltaFocusY / newScale; // Positive Y down moves center north
 
                 scale = newScale;
                 lastFocusX = focusX;
@@ -300,6 +302,7 @@ public class MontrealBenchMapView extends View {
             @Override
             public void onScaleEnd(ScaleGestureDetector detector) {
                 isScaling = false;
+                lastScaleEndTime = System.currentTimeMillis();
             }
         });
 
@@ -317,9 +320,15 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-                if (isScaling || (e2 != null && e2.getPointerCount() > 1)) {
+                // Suppress single-finger scroll jumps when multiple touches or right after scaling
+                if (isScaling || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
+                long now = System.currentTimeMillis();
+                if (now - lastPointerUpTime < 250 || now - lastScaleEndTime < 250) {
+                    return false;
+                }
+
                 centerMercX += distanceX / scale;
                 centerMercY -= distanceY / scale;
                 invalidate();
@@ -328,9 +337,14 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                if (isScaling || (e2 != null && e2.getPointerCount() > 1)) {
+                if (isScaling || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
+                long now = System.currentTimeMillis();
+                if (now - lastPointerUpTime < 250 || now - lastScaleEndTime < 250) {
+                    return false;
+                }
+
                 scroller.forceFinished(true);
                 scroller.fling(0, 0, (int) velocityX, (int) velocityY,
                         Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE);
@@ -367,7 +381,13 @@ public class MontrealBenchMapView extends View {
             scroller.forceFinished(true);
             if (animator != null && animator.isRunning()) animator.cancel();
         }
-        if (action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+        if (action == MotionEvent.ACTION_POINTER_DOWN) {
+            isScaling = true;
+        }
+        if (action == MotionEvent.ACTION_POINTER_UP) {
+            lastPointerUpTime = System.currentTimeMillis();
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             isScaling = false;
         }
 
@@ -397,7 +417,7 @@ public class MontrealBenchMapView extends View {
     }
 
     /**
-     * Ultra-fast binary map loader. Reads pre-calculated Mercator coordinates directly.
+     * Ultra-fast binary map loader (Format Version 2 with street names).
      */
     private void loadVectorDataBinary() {
         new Thread(() -> {
@@ -406,7 +426,7 @@ public class MontrealBenchMapView extends View {
                  BufferedInputStream bis = new BufferedInputStream(rawIn, 65536);
                  DataInputStream in = new DataInputStream(bis)) {
 
-                // 1. Validate Magic & Version
+                // 1. Header
                 byte[] magic = new byte[4];
                 in.readFully(magic);
                 String magicStr = new String(magic, StandardCharsets.US_ASCII);
@@ -414,28 +434,14 @@ public class MontrealBenchMapView extends View {
                     throw new IllegalStateException("Invalid binary map header: " + magicStr);
                 }
                 int version = in.readInt();
-                if (version != 1) {
-                    throw new IllegalStateException("Unsupported map version: " + version);
+                if (version != 2) {
+                    throw new IllegalStateException("Expected map version 2, got: " + version);
                 }
 
                 // 2. String Tables
-                short parkCount = in.readShort();
-                String[] parks = new String[parkCount];
-                for (int i = 0; i < parkCount; i++) {
-                    short len = in.readShort();
-                    byte[] strBytes = new byte[len];
-                    in.readFully(strBytes);
-                    parks[i] = new String(strBytes, StandardCharsets.UTF_8);
-                }
-
-                short matCount = in.readShort();
-                String[] materials = new String[matCount];
-                for (int i = 0; i < matCount; i++) {
-                    short len = in.readShort();
-                    byte[] strBytes = new byte[len];
-                    in.readFully(strBytes);
-                    materials[i] = new String(strBytes, StandardCharsets.UTF_8);
-                }
+                String[] parks = readStringTable(in);
+                String[] materials = readStringTable(in);
+                String[] streets = readStringTable(in);
 
                 // 3. Geometry Layers
                 List<GeometryLayer> loadedIsland = readGeometryLayers(in);
@@ -443,7 +449,7 @@ public class MontrealBenchMapView extends View {
                 List<GeometryLayer> loadedMajor = readGeometryLayers(in);
                 List<GeometryLayer> loadedMinor = readGeometryLayers(in);
 
-                // 4. Benches
+                // 4. Benches (with street index)
                 int benchCount = in.readInt();
                 List<Bench> loadedBenches = new ArrayList<>(benchCount);
                 for (int i = 0; i < benchCount; i++) {
@@ -452,17 +458,18 @@ public class MontrealBenchMapView extends View {
                     float mx = in.readFloat();
                     float my = in.readFloat();
                     short pIdx = in.readShort();
+                    short sIdx = in.readShort();
                     short mIdx = in.readShort();
                     byte backrest = in.readByte();
                     byte seats = in.readByte();
 
                     String park = (pIdx >= 0 && pIdx < parks.length) ? parks[pIdx] : "";
+                    String street = (sIdx >= 0 && sIdx < streets.length) ? streets[sIdx] : "";
                     String material = (mIdx >= 0 && mIdx < materials.length) ? materials[mIdx] : "";
 
-                    loadedBenches.add(new Bench(lat, lon, mx, my, park, material, backrest, seats));
+                    loadedBenches.add(new Bench(lat, lon, mx, my, park, street, material, backrest, seats));
                 }
 
-                // 5. Construct Spatial Index
                 SpatialBenchIndex newIndex = new SpatialBenchIndex(loadedBenches);
 
                 synchronized (dataLock) {
@@ -481,8 +488,9 @@ public class MontrealBenchMapView extends View {
                 }
 
                 long elapsed = System.currentTimeMillis() - startTime;
-                Log.d("BenchMap", "Binary map loaded in " + elapsed + "ms. "
-                        + loadedBenches.size() + " benches indexed.");
+                Log.d("BenchMap", "Binary map v2 loaded in " + elapsed + "ms ("
+                        + majorStreets.size() + " major, " + minorStreets.size() + " minor, "
+                        + loadedBenches.size() + " benches).");
 
                 post(() -> {
                     if (mapListener != null) {
@@ -495,6 +503,18 @@ public class MontrealBenchMapView extends View {
                 Log.e("BenchMap", "Error loading binary vector map", e);
             }
         }, "MapLoaderThread").start();
+    }
+
+    private String[] readStringTable(DataInputStream in) throws Exception {
+        short count = in.readShort();
+        String[] table = new String[count];
+        for (int i = 0; i < count; i++) {
+            short len = in.readShort();
+            byte[] strBytes = new byte[len];
+            in.readFully(strBytes);
+            table[i] = new String(strBytes, StandardCharsets.UTF_8);
+        }
+        return table;
     }
 
     private List<GeometryLayer> readGeometryLayers(DataInputStream in) throws Exception {
@@ -523,29 +543,8 @@ public class MontrealBenchMapView extends View {
         }
     }
 
-    public void setFilter(int filter) {
-        if (this.currentFilter != filter) {
-            this.currentFilter = filter;
-            if (selectedBench != null && !SpatialBenchIndex.matchesFilter(selectedBench, filter)) {
-                selectedBench = null;
-                if (mapListener != null) {
-                    mapListener.onBenchDeselected();
-                }
-            }
-            invalidate();
-        }
-    }
-
-    public int getFilteredCount() {
-        return getCountForFilter(currentFilter);
-    }
-
-    public int getCountForFilter(int filter) {
-        SpatialBenchIndex index = this.spatialIndex;
-        if (index != null) {
-            return index.countForFilter(filter);
-        }
-        return 0;
+    public int getTotalCount() {
+        return allBenches.size();
     }
 
     public void setUserLocation(Location loc) {
@@ -595,7 +594,7 @@ public class MontrealBenchMapView extends View {
         double startLat = (userLocation != null) ? userLocation.getLatitude() : CENTER_LAT;
         double startLon = (userLocation != null) ? userLocation.getLongitude() : CENTER_LON;
 
-        Bench nearest = index.findNearest(startLat, startLon, currentFilter);
+        Bench nearest = index.findNearest(startLat, startLon);
 
         if (nearest != null) {
             this.selectedBench = nearest;
@@ -624,11 +623,10 @@ public class MontrealBenchMapView extends View {
         double touchMercX = screenToMercX(touchX);
         double touchMercY = screenToMercY(touchY);
 
-        // Generous touch hit radius in Mercator units
         float hitRadiusPx = 36f * density;
         double hitRadiusMerc = hitRadiusPx / scale;
 
-        Bench hit = index.findTapHit(touchMercX, touchMercY, hitRadiusMerc, currentFilter);
+        Bench hit = index.findTapHit(touchMercX, touchMercY, hitRadiusMerc);
 
         this.selectedBench = hit;
         if (hit != null) {
@@ -678,7 +676,7 @@ public class MontrealBenchMapView extends View {
                 canvas.drawPath(pathPoly, paintShoreline);
             }
 
-            // 3. Parks & Green Sanctuaries
+            // 3. Parks & Green Spaces
             for (int i = 0; i < parkPolys.size(); i++) {
                 GeometryLayer poly = parkPolys.get(i);
                 if (poly.maxX < viewMinX || poly.minX > viewMaxX || poly.maxY < viewMinY || poly.minY > viewMaxY) {
@@ -696,43 +694,18 @@ public class MontrealBenchMapView extends View {
                 }
             }
 
-            // 4. Minor Streets
-            if (scale > 70000f) {
-                pathStreetMinor.reset();
-                int minorAlpha = (int) Math.min(220, Math.max(70, (scale - 70000f) / 120000f * 220));
-                paintStreetMinor.setAlpha(minorAlpha);
-
-                for (int i = 0; i < minorStreets.size(); i++) {
-                    GeometryLayer s = minorStreets.get(i);
-                    if (s.maxX < viewMinX || s.minX > viewMaxX || s.maxY < viewMinY || s.minY > viewMaxY) {
-                        continue;
-                    }
-                    pathStreetMinor.moveTo(screenX(s.coords[0]), screenY(s.coords[1]));
-                    for (int j = 2; j < s.coords.length; j += 2) {
-                        pathStreetMinor.lineTo(screenX(s.coords[j]), screenY(s.coords[j + 1]));
-                    }
-                }
-                canvas.drawPath(pathStreetMinor, paintStreetMinor);
+            // 4. Minor Streets (Batch line rendering)
+            if (scale > 75000f) {
+                float minorWidth = (scale > 400000f) ? (1.3f * density) : (0.9f * density);
+                paintStreetMinor.setStrokeWidth(minorWidth);
+                drawLayerLines(canvas, minorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMinor);
             }
 
-            // 5. Major Streets
-            pathStreetMajor.reset();
-            float majorWidth = (scale > 800000f) ? (3.6f * density)
-                    : ((scale > 300000f) ? (3.0f * density)
-                    : ((scale > 120000f) ? (2.4f * density) : (2.0f * density)));
+            // 5. Major Streets (Batch line rendering)
+            float majorWidth = (scale > 600000f) ? (2.4f * density)
+                    : ((scale > 200000f) ? (1.8f * density) : (1.3f * density));
             paintStreetMajor.setStrokeWidth(majorWidth);
-
-            for (int i = 0; i < majorStreets.size(); i++) {
-                GeometryLayer s = majorStreets.get(i);
-                if (s.maxX < viewMinX || s.minX > viewMaxX || s.maxY < viewMinY || s.minY > viewMaxY) {
-                    continue;
-                }
-                pathStreetMajor.moveTo(screenX(s.coords[0]), screenY(s.coords[1]));
-                for (int j = 2; j < s.coords.length; j += 2) {
-                    pathStreetMajor.lineTo(screenX(s.coords[j]), screenY(s.coords[j + 1]));
-                }
-            }
-            canvas.drawPath(pathStreetMajor, paintStreetMajor);
+            drawLayerLines(canvas, majorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMajor);
 
             // 6. Walk Guidance Line
             if (userLocation != null && selectedBench != null) {
@@ -743,18 +716,14 @@ public class MontrealBenchMapView extends View {
                 canvas.drawLine(ux, uy, bx, by, paintWalkLine);
             }
 
-            // 7. Benches with LOD thinning & Category styling
-            float benchRadius = (scale > 1800000f) ? (5.2f * density)
-                    : ((scale > 600000f) ? (3.8f * density)
-                    : ((scale > 220000f) ? (2.6f * density) : (1.8f * density)));
+            // 7. Benches
+            float benchRadius = (scale > 1800000f) ? (5.0f * density)
+                    : ((scale > 600000f) ? (3.6f * density)
+                    : ((scale > 220000f) ? (2.5f * density) : (1.8f * density)));
 
-            // At wide overview (scale < 85000), sample step=3 to prevent overdraw blur
             int step = (scale < 85000f) ? 3 : 1;
-            int filter = currentFilter;
-
             for (int i = 0; i < allBenches.size(); i += step) {
                 Bench b = allBenches.get(i);
-                if (!SpatialBenchIndex.matchesFilter(b, filter)) continue;
                 if (b.mercX < viewMinX || b.mercX > viewMaxX || b.mercY < viewMinY || b.mercY > viewMaxY) {
                     continue;
                 }
@@ -763,25 +732,55 @@ public class MontrealBenchMapView extends View {
                 canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
             }
 
-            // 8. Selected Bench Halo Highlight
+            // 8. Selected Bench Highlight Ring
             if (selectedBench != null) {
                 float bx = screenX(selectedBench.mercX);
                 float by = screenY(selectedBench.mercY);
 
-                // Outer Swiss red ring
                 canvas.drawCircle(bx, by, benchRadius + 7.5f * density, paintBenchSelected);
-                // Contrast gap
                 canvas.drawCircle(bx, by, benchRadius + 4.0f * density, paintBenchSelectedGap);
-                // Core dot
                 canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchSelectedCore);
             }
         }
 
-        // 9. User Precision Swiss Vector Pin & Compass Heading Cone
+        // 9. User Precision Swiss Pin & Compass Heading Cone
         if (userLocation != null) {
             float ux = screenX(lonToMercatorX(userLocation.getLongitude()));
             float uy = screenY(latToMercatorY(userLocation.getLatitude()));
             drawUserPin(canvas, ux, uy, userLocation.hasAccuracy() ? userLocation.getAccuracy() : 0);
+        }
+    }
+
+    /**
+     * Hardware-accelerated drawLines using pre-allocated float buffer.
+     */
+    private void drawLayerLines(Canvas canvas, List<GeometryLayer> layers,
+                                double minX, double maxX, double minY, double maxY, Paint paint) {
+        int bufIdx = 0;
+        int maxCap = lineBuffer.length;
+
+        for (int i = 0; i < layers.size(); i++) {
+            GeometryLayer layer = layers.get(i);
+            if (layer.maxX < minX || layer.minX > maxX || layer.maxY < minY || layer.minY > maxY) {
+                continue;
+            }
+
+            float[] c = layer.coords;
+            int numPts = c.length;
+            for (int j = 0; j < numPts - 2; j += 2) {
+                if (bufIdx + 4 > maxCap) {
+                    canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                    bufIdx = 0;
+                }
+                lineBuffer[bufIdx++] = screenX(c[j]);
+                lineBuffer[bufIdx++] = screenY(c[j + 1]);
+                lineBuffer[bufIdx++] = screenX(c[j + 2]);
+                lineBuffer[bufIdx++] = screenY(c[j + 3]);
+            }
+        }
+
+        if (bufIdx > 0) {
+            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
         }
     }
 
