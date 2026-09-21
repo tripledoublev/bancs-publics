@@ -160,30 +160,30 @@ public class MontrealBenchMapView extends View {
     }
 
     // Colors - Refined Architectural Swiss Palette (Light)
-    private static final int LIGHT_WATER = Color.parseColor("#E4E9ED");         // Crisp architectural Nordic water
+    private static final int LIGHT_WATER = Color.parseColor("#E6ECF1");         // Crisp architectural Nordic water
     private static final int LIGHT_LAND = Color.parseColor("#F5F5F7");          // Pure clean landmass / paper
     private static final int LIGHT_SHORELINE = Color.parseColor("#D0D6DC");     // Subtle hairline perimeter
-    private static final int LIGHT_PARK = Color.parseColor("#E1EDE4");         // Serene organic sage green
+    private static final int LIGHT_PARK = Color.parseColor("#E5F2E8");         // Serene organic sage green
     private static final int LIGHT_PARK_BORDER = Color.parseColor("#C3D9C7");   // Park boundary hairline
-    private static final int LIGHT_STREET_MAJOR = Color.parseColor("#8E8E93");  // Slate - elegant arterial lines
-    private static final int LIGHT_STREET_MINOR = Color.parseColor("#D1D1D6");  // Whisper hairline residential
+    private static final int LIGHT_STREET_MAJOR = Color.parseColor("#94A3B8");  // Slate - elegant arterial lines
+    private static final int LIGHT_STREET_MINOR = Color.parseColor("#CBD5E1");  // Whisper hairline residential
     private static final int LIGHT_BENCH_STREET = Color.parseColor("#121212");  // Swiss charcoal / Ink
     private static final int LIGHT_BENCH_PARK = Color.parseColor("#2B7A4B");    // Forest emerald
     private static final int LIGHT_BENCH_HALO = Color.parseColor("#F5F5F7");
     private static final int LIGHT_BENCH_GAP = Color.parseColor("#F5F5F7");
 
     // Nocturne Swiss Minimalist Palette (Dark / OLED)
-    private static final int DARK_WATER = Color.parseColor("#000000");          // Deep midnight oceanic
-    private static final int DARK_LAND = Color.parseColor("#121212");           // Matte obsidian slate
-    private static final int DARK_SHORELINE = Color.parseColor("#1C1C1E");      // Subtle shoreline contour
-    private static final int DARK_PARK = Color.parseColor("#17201A");          // Nocturnal botanical emerald
-    private static final int DARK_PARK_BORDER = Color.parseColor("#1E2A22");    // Park boundary hairline
-    private static final int DARK_STREET_MAJOR = Color.parseColor("#3A3A3C");   // Visible arterial network
-    private static final int DARK_STREET_MINOR = Color.parseColor("#1C1C1E");   // Whisper neighbourhood grid
+    private static final int DARK_WATER = Color.parseColor("#090A0C");          // Deep midnight oceanic
+    private static final int DARK_LAND = Color.parseColor("#121316");           // Matte obsidian slate
+    private static final int DARK_SHORELINE = Color.parseColor("#1C1E24");      // Subtle shoreline contour
+    private static final int DARK_PARK = Color.parseColor("#141F18");          // Nocturnal botanical emerald
+    private static final int DARK_PARK_BORDER = Color.parseColor("#1D2E23");    // Park boundary hairline
+    private static final int DARK_STREET_MAJOR = Color.parseColor("#2E323B");   // Visible arterial network
+    private static final int DARK_STREET_MINOR = Color.parseColor("#1A1C22");   // Whisper neighbourhood grid
     private static final int DARK_BENCH_STREET = Color.parseColor("#F5F5F7");   // Crisp platinum chalk dots
     private static final int DARK_BENCH_PARK = Color.parseColor("#34C759");     // Luminous mint emerald dots
-    private static final int DARK_BENCH_HALO = Color.parseColor("#121212");     // Dark separation ring
-    private static final int DARK_BENCH_GAP = Color.parseColor("#121212");
+    private static final int DARK_BENCH_HALO = Color.parseColor("#121316");     // Dark separation ring (same as DARK_LAND)
+    private static final int DARK_BENCH_GAP = Color.parseColor("#121316");
 
     private static final int COLOR_SWISS_RED = Color.parseColor("#E52B35");
     private static final int COLOR_WHITE = Color.parseColor("#FFFFFF");
