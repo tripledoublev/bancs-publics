@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_light">#F7F8FA</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="card_border">#E5E7EB</color>
+    <color name="swiss_red">#DE3831</color>
+    <color name="swiss_black">#111827</color>
+    <color name="bench_park">#3F7A59</color>
+    <color name="bench_street">#BA6E47</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#4B5563</color>
+    <color name="text_muted">#9CA3AF</color>
+    <color name="chip_bg">#F3F4F6</color>
+
+    <!-- Legacy compatibility aliases -->
+    <color name="bench_amber">#DE3831</color>
+    <color name="bench_cyan">#3F7A59</color>
+    <color name="bg_dark">#F7F8FA</color>
+</resources>
