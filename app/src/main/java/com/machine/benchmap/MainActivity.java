@@ -45,7 +45,12 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Window;
+import android.widget.EditText;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -67,7 +72,22 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private MaterialCardView cardHeader;
     private TextView tvAppTitle, tvAppSubtitle;
     private ImageView btnThemeToggle;
+    private ImageView btnMeetup;
     private boolean isDarkMode = false;
+
+    // Rendez-vous (Meetup) Banner
+    private MaterialCardView cardMeetupBanner;
+    private TextView tvMeetupBannerTitle, tvMeetupBannerSubtitle;
+    private MaterialButton btnMeetupCycle;
+    private ImageView btnMeetupClose;
+
+    // Meetup state
+    private Double friendLat = null;
+    private Double friendLon = null;
+    private int friendBlurMeters = 0;
+    private final List<MeetupFinder.MeetupBench> currentHalfwayBenches = new ArrayList<>();
+    private int currentMeetupBenchIndex = 0;
+    private int selectedBlurRadius = MeetupKey.BLUR_EXACT;
 
     // Floating Action Controls
     private FloatingActionButton fabMyLocation;
@@ -134,6 +154,14 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         benchMapView.setMapListener(this);
         checkLocationPermission();
+        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
     }
 
     private void bindViews() {
@@ -145,6 +173,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
+        btnMeetup = findViewById(R.id.btn_meetup);
+
+        cardMeetupBanner = findViewById(R.id.card_meetup_banner);
+        tvMeetupBannerTitle = findViewById(R.id.tv_meetup_banner_title);
+        tvMeetupBannerSubtitle = findViewById(R.id.tv_meetup_banner_subtitle);
+        btnMeetupCycle = findViewById(R.id.btn_meetup_cycle);
+        btnMeetupClose = findViewById(R.id.btn_meetup_close);
 
         fabMyLocation = findViewById(R.id.fab_my_location);
         btnNearest = findViewById(R.id.btn_nearest);
@@ -238,6 +273,26 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (btnThemeToggle != null) {
             btnThemeToggle.setImageResource(darkMode ? R.drawable.ic_theme_sun : R.drawable.ic_theme_moon);
             btnThemeToggle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F59E0B") : Color.parseColor("#111318")));
+        }
+        if (btnMeetup != null) {
+            btnMeetup.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#60A5FA") : Color.parseColor("#2563EB")));
+        }
+
+        // Rendez-vous Banner Styling
+        if (cardMeetupBanner != null) {
+            cardMeetupBanner.setCardBackgroundColor(bgCard);
+            cardMeetupBanner.setStrokeColor(darkMode ? Color.parseColor("#3B82F6") : Color.parseColor("#2563EB"));
+        }
+        if (tvMeetupBannerTitle != null) {
+            tvMeetupBannerTitle.setTextColor(darkMode ? Color.parseColor("#60A5FA") : Color.parseColor("#2563EB"));
+        }
+        if (tvMeetupBannerSubtitle != null) {
+            tvMeetupBannerSubtitle.setTextColor(textMuted);
+        }
+        if (btnMeetupCycle != null) {
+            btnMeetupCycle.setBackgroundColor(chipBg);
+            btnMeetupCycle.setTextColor(darkMode ? Color.parseColor("#60A5FA") : Color.parseColor("#2563EB"));
+            btnMeetupCycle.setStrokeColor(ColorStateList.valueOf(borderCard));
         }
 
         // 2. Bottom Floating Controls
@@ -419,6 +474,27 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 shareBench(currentlySelectedBench);
             }
         });
+
+        if (btnMeetup != null) {
+            btnMeetup.setOnClickListener(v -> {
+                triggerHapticTick();
+                showMeetupDialog();
+            });
+        }
+
+        if (btnMeetupCycle != null) {
+            btnMeetupCycle.setOnClickListener(v -> {
+                triggerHapticTick();
+                cycleNextMeetupBench();
+            });
+        }
+
+        if (btnMeetupClose != null) {
+            btnMeetupClose.setOnClickListener(v -> {
+                triggerHapticTick();
+                clearMeetupMode();
+            });
+        }
     }
 
     @Override
@@ -439,7 +515,21 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             tvBenchType.setText(bench.getDisplaySubtitle());
             tvBenchCoords.setText(String.format(Locale.US, "%.5f° N, %.5f° W", bench.lat, Math.abs(bench.lon)));
 
-            if (distanceMeters > 0) {
+            if (benchMapView.isMeetupActive() && friendLat != null && friendLon != null) {
+                double uLat = (lastLocation != null) ? lastLocation.getLatitude() : MontrealBenchMapView.CENTER_LAT;
+                double uLon = (lastLocation != null) ? lastLocation.getLongitude() : MontrealBenchMapView.CENTER_LON;
+                double du = MeetupFinder.haversine(uLat, uLon, bench.lat, bench.lon);
+                double df = MeetupFinder.haversine(friendLat, friendLon, bench.lat, bench.lon);
+                double imb = Math.abs(du - df);
+
+                tvBenchDistance.setText(String.format(Locale.CANADA_FRENCH, "Vous: %s • Ami: %s",
+                        formatMeters(du), formatMeters(df)));
+                tvBenchDistance.setVisibility(View.VISIBLE);
+
+                String fairDesc = (imb < 50) ? "Écart " + Math.round(imb) + " m (Équité parfaite)" :
+                        "Écart " + formatMeters(imb) + " (" + (imb < 200 ? "Très équitable" : "Mi-chemin") + ")";
+                tvBenchCoords.setText(String.format(Locale.US, "%.5f° N, %.5f° W • %s", bench.lat, Math.abs(bench.lon), fairDesc));
+            } else if (distanceMeters > 0) {
                 if (distanceMeters < 1000) {
                     tvBenchDistance.setText(String.format(Locale.CANADA_FRENCH, "%.0f m", distanceMeters));
                 } else {
@@ -537,6 +627,233 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             ClipData clip = ClipData.newPlainText(label, text);
             clipboard.setPrimaryClip(clip);
         }
+    }
+
+    private String formatMeters(double meters) {
+        if (meters < 1000) {
+            return Math.round(meters) + " m";
+        }
+        return String.format(Locale.CANADA_FRENCH, "%.1f km", meters / 1000.0);
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent == null || intent.getData() == null) return;
+        Uri data = intent.getData();
+        if ("benchmap".equalsIgnoreCase(data.getScheme()) && "meet".equalsIgnoreCase(data.getHost())) {
+            String key = data.getQueryParameter("k");
+            if (key != null && !key.isEmpty()) {
+                applyFriendKey(key);
+            }
+        }
+    }
+
+    private void showMeetupDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_meetup, null);
+        dialog.setContentView(view);
+
+        ImageView btnDialogClose = view.findViewById(R.id.btn_dialog_close);
+        MaterialButton tabBtnShare = view.findViewById(R.id.tab_btn_share);
+        MaterialButton tabBtnJoin = view.findViewById(R.id.tab_btn_join);
+        View layoutTabShare = view.findViewById(R.id.layout_tab_share);
+        View layoutTabJoin = view.findViewById(R.id.layout_tab_join);
+
+        TextView chipExact = view.findViewById(R.id.chip_blur_exact);
+        TextView chipDiscreet = view.findViewById(R.id.chip_blur_discreet);
+        TextView chipDistrict = view.findViewById(R.id.chip_blur_district);
+
+        TextView tvGeneratedKey = view.findViewById(R.id.tv_generated_key);
+        MaterialButton btnCopyKey = view.findViewById(R.id.btn_copy_key);
+        MaterialButton btnShareInvite = view.findViewById(R.id.btn_share_invite);
+
+        EditText etFriendKey = view.findViewById(R.id.et_friend_key);
+        MaterialButton btnPasteKey = view.findViewById(R.id.btn_paste_key);
+        TextView tvKeyError = view.findViewById(R.id.tv_key_error);
+        MaterialButton btnCalculateMeetup = view.findViewById(R.id.btn_calculate_meetup);
+
+        final double baseLat = (currentlySelectedBench != null) ? currentlySelectedBench.lat :
+                ((lastLocation != null) ? lastLocation.getLatitude() : MontrealBenchMapView.CENTER_LAT);
+        final double baseLon = (currentlySelectedBench != null) ? currentlySelectedBench.lon :
+                ((lastLocation != null) ? lastLocation.getLongitude() : MontrealBenchMapView.CENTER_LON);
+        final String baseName = (currentlySelectedBench != null) ? currentlySelectedBench.getDisplayName() : "Montréal";
+
+        final int[] blurSetting = new int[]{selectedBlurRadius};
+
+        Runnable updateKeyDisplay = () -> {
+            String key = MeetupKey.encode(baseLat, baseLon, blurSetting[0]);
+            tvGeneratedKey.setText(key);
+        };
+
+        Runnable updateBlurChips = () -> {
+            chipExact.setAlpha(blurSetting[0] == MeetupKey.BLUR_EXACT ? 1.0f : 0.45f);
+            chipDiscreet.setAlpha(blurSetting[0] == MeetupKey.BLUR_DISCREET ? 1.0f : 0.45f);
+            chipDistrict.setAlpha(blurSetting[0] == MeetupKey.BLUR_DISTRICT ? 1.0f : 0.45f);
+            updateKeyDisplay.run();
+        };
+
+        updateBlurChips.run();
+
+        chipExact.setOnClickListener(v -> {
+            triggerHapticTick();
+            blurSetting[0] = MeetupKey.BLUR_EXACT;
+            selectedBlurRadius = MeetupKey.BLUR_EXACT;
+            updateBlurChips.run();
+        });
+
+        chipDiscreet.setOnClickListener(v -> {
+            triggerHapticTick();
+            blurSetting[0] = MeetupKey.BLUR_DISCREET;
+            selectedBlurRadius = MeetupKey.BLUR_DISCREET;
+            updateBlurChips.run();
+        });
+
+        chipDistrict.setOnClickListener(v -> {
+            triggerHapticTick();
+            blurSetting[0] = MeetupKey.BLUR_DISTRICT;
+            selectedBlurRadius = MeetupKey.BLUR_DISTRICT;
+            updateBlurChips.run();
+        });
+
+        tabBtnShare.setOnClickListener(v -> {
+            triggerHapticTick();
+            layoutTabShare.setVisibility(View.VISIBLE);
+            layoutTabJoin.setVisibility(View.GONE);
+            tabBtnShare.setAlpha(1.0f);
+            tabBtnJoin.setAlpha(0.6f);
+        });
+
+        tabBtnJoin.setOnClickListener(v -> {
+            triggerHapticTick();
+            layoutTabShare.setVisibility(View.GONE);
+            layoutTabJoin.setVisibility(View.VISIBLE);
+            tabBtnShare.setAlpha(0.6f);
+            tabBtnJoin.setAlpha(1.0f);
+        });
+
+        if (btnDialogClose != null) {
+            btnDialogClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        btnCopyKey.setOnClickListener(v -> {
+            triggerHapticTick();
+            String key = tvGeneratedKey.getText().toString();
+            copyToClipboard("BenchMap Meetup Key", key);
+            Toast.makeText(this, "Clé copiée dans le presse-papier !", Toast.LENGTH_SHORT).show();
+        });
+
+        btnShareInvite.setOnClickListener(v -> {
+            triggerHapticTick();
+            String key = tvGeneratedKey.getText().toString();
+            String text = MeetupKey.formatShareText(key, baseName);
+            Intent sendIntent = new Intent(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, text);
+            sendIntent.setType("text/plain");
+            startActivity(Intent.createChooser(sendIntent, "Inviter un ami"));
+            dialog.dismiss();
+        });
+
+        btnPasteKey.setOnClickListener(v -> {
+            triggerHapticTick();
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                if (text != null) {
+                    etFriendKey.setText(text.toString().trim());
+                    tvKeyError.setVisibility(View.INVISIBLE);
+                }
+            } else {
+                Toast.makeText(this, "Presse-papier vide", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnCalculateMeetup.setOnClickListener(v -> {
+            triggerHapticTick();
+            String input = etFriendKey.getText().toString();
+            MeetupKey.DecodedLocation decoded = MeetupKey.decode(input);
+            if (decoded == null) {
+                tvKeyError.setVisibility(View.VISIBLE);
+                tvKeyError.setText("Clé invalide ou mal orthographiée");
+                return;
+            }
+            dialog.dismiss();
+            startMeetupMode(decoded.lat, decoded.lon, decoded.blurMeters);
+        });
+
+        dialog.show();
+    }
+
+    public boolean applyFriendKey(String key) {
+        MeetupKey.DecodedLocation decoded = MeetupKey.decode(key);
+        if (decoded != null) {
+            startMeetupMode(decoded.lat, decoded.lon, decoded.blurMeters);
+            return true;
+        } else {
+            Toast.makeText(this, "Clé de rencontre invalide", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
+
+    public void startMeetupMode(double fLat, double fLon, int fBlur) {
+        this.friendLat = fLat;
+        this.friendLon = fLon;
+        this.friendBlurMeters = fBlur;
+
+        double uLat = (lastLocation != null) ? lastLocation.getLatitude() : MontrealBenchMapView.CENTER_LAT;
+        double uLon = (lastLocation != null) ? lastLocation.getLongitude() : MontrealBenchMapView.CENTER_LON;
+
+        List<Bench> all = benchMapView.getAllBenches();
+        currentHalfwayBenches.clear();
+        currentHalfwayBenches.addAll(MeetupFinder.findHalfwayBenches(all, uLat, uLon, fLat, fLon, 25));
+
+        if (currentHalfwayBenches.isEmpty()) {
+            Toast.makeText(this, "Aucun banc trouvé à mi-chemin", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<Bench> rawBenches = new ArrayList<>();
+        for (MeetupFinder.MeetupBench mb : currentHalfwayBenches) {
+            rawBenches.add(mb.bench);
+        }
+
+        benchMapView.setMeetup(fLat, fLon, fBlur, rawBenches);
+        benchMapView.fitBounds(uLat, uLon, fLat, fLon);
+
+        double directDist = MeetupFinder.haversine(uLat, uLon, fLat, fLon);
+        String distStr = formatMeters(directDist);
+
+        cardMeetupBanner.setVisibility(View.VISIBLE);
+        tvMeetupBannerTitle.setText("🤝 RENDEZ-VOUS ACTIF");
+        tvMeetupBannerSubtitle.setText("Ami à " + distStr + " • " + currentHalfwayBenches.size() + " bancs équitables trouvés");
+
+        selectMeetupBench(0);
+        Toast.makeText(this, "Bancs à mi-chemin calculés avec succès !", Toast.LENGTH_SHORT).show();
+    }
+
+    private void selectMeetupBench(int index) {
+        if (currentHalfwayBenches.isEmpty()) return;
+        currentMeetupBenchIndex = (index + currentHalfwayBenches.size()) % currentHalfwayBenches.size();
+        MeetupFinder.MeetupBench mb = currentHalfwayBenches.get(currentMeetupBenchIndex);
+
+        benchMapView.selectBench(mb.bench);
+        benchMapView.animateToCoords(mb.bench.lat, mb.bench.lon, 2200000f);
+
+        tvMeetupBannerTitle.setText(String.format(Locale.US, "🤝 BANC À MI-CHEMIN #%d / %d",
+                (currentMeetupBenchIndex + 1), currentHalfwayBenches.size()));
+    }
+
+    private void cycleNextMeetupBench() {
+        selectMeetupBench(currentMeetupBenchIndex + 1);
+    }
+
+    public void clearMeetupMode() {
+        friendLat = null;
+        friendLon = null;
+        friendBlurMeters = 0;
+        currentHalfwayBenches.clear();
+        currentMeetupBenchIndex = 0;
+        benchMapView.clearMeetup();
+        cardMeetupBanner.setVisibility(View.GONE);
+        Toast.makeText(this, "Mode Rendez-vous terminé", Toast.LENGTH_SHORT).show();
     }
 
     private void triggerHapticTick() {

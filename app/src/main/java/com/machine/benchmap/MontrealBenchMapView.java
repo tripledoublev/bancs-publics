@@ -4,6 +4,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -213,9 +214,23 @@ public class MontrealBenchMapView extends View {
     private final Paint paintAccuracyStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintHeadingCone = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Friend / Rendez-vous Meetup State & Paints
+    private Double friendLat = null;
+    private Double friendLon = null;
+    private int friendBlurMeters = 0;
+    private final List<Bench> meetupBenches = new ArrayList<>();
+    private final Paint paintFriendPinFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintFriendPinStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintFriendBlurFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintFriendBlurStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintMeetupLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintMeetupBenchHalo = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintMeetupBenchCore = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     // Reusable Paths & Rects
     private final Path pathPoly = new Path();
     private final Path pinPath = new Path();
+    private final Path friendPinPath = new Path();
     private final Path headingPath = new Path();
     private final RectF headingArcRect = new RectF();
 
@@ -344,6 +359,23 @@ public class MontrealBenchMapView extends View {
 
         paintHeadingCone.setStyle(Paint.Style.FILL);
 
+        // Friend Pin & Meetup Paints
+        paintFriendPinFill.setStyle(Paint.Style.FILL);
+        paintFriendPinStroke.setStyle(Paint.Style.STROKE);
+        paintFriendPinStroke.setStrokeWidth(1.8f * density);
+
+        paintFriendBlurFill.setStyle(Paint.Style.FILL);
+        paintFriendBlurStroke.setStyle(Paint.Style.STROKE);
+        paintFriendBlurStroke.setStrokeWidth(1.2f * density);
+
+        paintMeetupLine.setStyle(Paint.Style.STROKE);
+        paintMeetupLine.setStrokeWidth(2.0f * density);
+        paintMeetupLine.setPathEffect(new DashPathEffect(new float[]{14f * density, 10f * density}, 0));
+
+        paintMeetupBenchHalo.setStyle(Paint.Style.STROKE);
+        paintMeetupBenchHalo.setStrokeWidth(2.2f * density);
+        paintMeetupBenchCore.setStyle(Paint.Style.FILL);
+
         applyThemeColors();
 
         initGestures();
@@ -388,6 +420,12 @@ public class MontrealBenchMapView extends View {
 
             paintHeadingCone.setColor(COLOR_SWISS_RED);
             paintHeadingCone.setAlpha(40);
+
+            paintFriendPinFill.setColor(Color.parseColor("#3B82F6"));
+            paintFriendPinStroke.setColor(DARK_LAND);
+            paintFriendBlurFill.setColor(Color.argb(35, 59, 130, 246));
+            paintFriendBlurStroke.setColor(Color.argb(120, 59, 130, 246));
+            paintMeetupLine.setColor(Color.parseColor("#60A5FA"));
         } else {
             paintLand.setColor(LIGHT_LAND);
             paintShoreline.setColor(LIGHT_SHORELINE);
@@ -414,7 +452,16 @@ public class MontrealBenchMapView extends View {
 
             paintHeadingCone.setColor(COLOR_SWISS_RED);
             paintHeadingCone.setAlpha(35);
+
+            paintFriendPinFill.setColor(Color.parseColor("#2563EB"));
+            paintFriendPinStroke.setColor(COLOR_WHITE);
+            paintFriendBlurFill.setColor(Color.argb(30, 37, 99, 235));
+            paintFriendBlurStroke.setColor(Color.argb(100, 37, 99, 235));
+            paintMeetupLine.setColor(Color.parseColor("#3B82F6"));
         }
+
+        paintMeetupBenchHalo.setColor(Color.parseColor("#F59E0B"));
+        paintMeetupBenchCore.setColor(Color.parseColor("#F59E0B"));
     }
 
     private void initGestures() {
@@ -797,6 +844,17 @@ public class MontrealBenchMapView extends View {
         }
     }
 
+    public void selectBench(Bench bench) {
+        if (bench == null) return;
+        this.selectedBench = bench;
+        double dist = (userLocation != null) ?
+                computeDistance(userLocation.getLatitude(), userLocation.getLongitude(), bench.lat, bench.lon) : 0;
+        if (mapListener != null) {
+            mapListener.onBenchSelected(bench, dist);
+        }
+        invalidate();
+    }
+
     public void deselectBench() {
         this.selectedBench = null;
         if (mapListener != null) {
@@ -951,6 +1009,28 @@ public class MontrealBenchMapView extends View {
                 }
             }
 
+            // 6.5. Meetup Candidate Benches (Luminous Amber Halos)
+            if (!meetupBenches.isEmpty()) {
+                float mHaloR = benchRadius + 3.8f * density;
+                for (int i = 0; i < meetupBenches.size(); i++) {
+                    Bench mb = meetupBenches.get(i);
+                    float mx = halfW + (float) ((mb.mercX - cX) * sc);
+                    float my = halfH - (float) ((mb.mercY - cY) * sc);
+                    canvas.drawCircle(mx, my, mHaloR + 1.2f * density, paintBenchHalo);
+                    canvas.drawCircle(mx, my, mHaloR, paintMeetupBenchHalo);
+                    canvas.drawCircle(mx, my, benchRadius + 0.8f * density, paintMeetupBenchCore);
+                }
+            }
+
+            // 6.6. Geodesic Connection Line between User and Friend
+            if (userLocation != null && friendLat != null && friendLon != null) {
+                float ux = halfW + (float) ((lonToMercatorX(userLocation.getLongitude()) - cX) * sc);
+                float uy = halfH - (float) ((latToMercatorY(userLocation.getLatitude()) - cY) * sc);
+                float fx = halfW + (float) ((lonToMercatorX(friendLon) - cX) * sc);
+                float fy = halfH - (float) ((latToMercatorY(friendLat) - cY) * sc);
+                canvas.drawLine(ux, uy, fx, fy, paintMeetupLine);
+            }
+
             // 7. Selected Bench Highlight (Swiss Concentric Rings)
             if (selectedBench != null) {
                 float bx = halfW + (float) ((selectedBench.mercX - cX) * sc);
@@ -968,6 +1048,13 @@ public class MontrealBenchMapView extends View {
             float ux = halfW + (float) ((lonToMercatorX(userLocation.getLongitude()) - cX) * sc);
             float uy = halfH - (float) ((latToMercatorY(userLocation.getLatitude()) - cY) * sc);
             drawUserPin(canvas, ux, uy, userLocation.hasAccuracy() ? userLocation.getAccuracy() : 0);
+        }
+
+        // 9. Friend Precision Cobalt Pin & Privacy Blur Circle
+        if (friendLat != null && friendLon != null) {
+            float fx = halfW + (float) ((lonToMercatorX(friendLon) - cX) * sc);
+            float fy = halfH - (float) ((latToMercatorY(friendLat) - cY) * sc);
+            drawFriendPin(canvas, fx, fy, friendBlurMeters);
         }
     }
 
@@ -1031,6 +1118,118 @@ public class MontrealBenchMapView extends View {
         canvas.drawPath(pinPath, paintPinFill);
         canvas.drawPath(pinPath, paintPinStroke);
         canvas.drawCircle(ux, headCenterY, 3.0f * density, paintPinDot);
+    }
+
+    private void drawFriendPin(Canvas canvas, float fx, float fy, float blurMeters) {
+        // 1. Privacy Blur Circle (if enabled)
+        if (blurMeters > 0 && scale > 120000f) {
+            double metersPerMercRad = 6371000.0 * Math.cos(Math.toRadians(CENTER_LAT));
+            float radiusPx = (float) ((blurMeters / metersPerMercRad) * scale);
+            if (radiusPx > 8f * density && radiusPx < 500f * density) {
+                canvas.drawCircle(fx, fy, radiusPx, paintFriendBlurFill);
+                canvas.drawCircle(fx, fy, radiusPx, paintFriendBlurStroke);
+            }
+        }
+
+        // 2. Ground Shadow
+        RectF shadowRect = new RectF(
+                fx - 8.5f * density,
+                fy - 2.5f * density,
+                fx + 8.5f * density,
+                fy + 3.5f * density
+        );
+        canvas.drawOval(shadowRect, paintPinShadow);
+
+        // 3. Swiss Teardrop Pin Geometry (Cobalt Blue for Friend)
+        float headCenterY = fy - 22f * density;
+        float headRadius = 8.5f * density;
+
+        friendPinPath.reset();
+        friendPinPath.moveTo(fx, fy);
+        friendPinPath.cubicTo(
+                fx - 2.5f * density, fy - 8f * density,
+                fx - headRadius, headCenterY + 4f * density,
+                fx - headRadius, headCenterY
+        );
+        friendPinPath.arcTo(
+                fx - headRadius, headCenterY - headRadius,
+                fx + headRadius, headCenterY + headRadius,
+                180f, 180f, false
+        );
+        friendPinPath.cubicTo(
+                fx + headRadius, headCenterY + 4f * density,
+                fx + 2.5f * density, fy - 8f * density,
+                fx, fy
+        );
+        friendPinPath.close();
+
+        canvas.drawPath(friendPinPath, paintFriendPinFill);
+        canvas.drawPath(friendPinPath, paintFriendPinStroke);
+        canvas.drawCircle(fx, headCenterY, 3.0f * density, paintPinDot);
+    }
+
+    public void setMeetup(double fLat, double fLon, int fBlurMeters, List<Bench> halfwayList) {
+        this.friendLat = fLat;
+        this.friendLon = fLon;
+        this.friendBlurMeters = fBlurMeters;
+        this.meetupBenches.clear();
+        if (halfwayList != null) {
+            this.meetupBenches.addAll(halfwayList);
+        }
+        postInvalidate();
+    }
+
+    public void clearMeetup() {
+        this.friendLat = null;
+        this.friendLon = null;
+        this.friendBlurMeters = 0;
+        this.meetupBenches.clear();
+        postInvalidate();
+    }
+
+    public boolean isMeetupActive() {
+        return friendLat != null && friendLon != null;
+    }
+
+    public Double getFriendLat() {
+        return friendLat;
+    }
+
+    public Double getFriendLon() {
+        return friendLon;
+    }
+
+    public List<Bench> getMeetupBenches() {
+        return new ArrayList<>(meetupBenches);
+    }
+
+    public List<Bench> getAllBenches() {
+        synchronized (dataLock) {
+            return new ArrayList<>(allBenches);
+        }
+    }
+
+    public void fitBounds(double lat1, double lon1, double lat2, double lon2) {
+        double mX1 = lonToMercatorX(lon1);
+        double mY1 = latToMercatorY(lat1);
+        double mX2 = lonToMercatorX(lon2);
+        double mY2 = latToMercatorY(lat2);
+
+        double targetCX = (mX1 + mX2) * 0.5;
+        double targetCY = (mY1 + mY2) * 0.5;
+
+        double dX = Math.abs(mX1 - mX2);
+        double dY = Math.abs(mY1 - mY2);
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        float targetScaleX = (float) ((w * 0.55) / Math.max(0.0001, dX));
+        float targetScaleY = (float) ((h * 0.40) / Math.max(0.0001, dY));
+        float targetScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE * 0.5f, Math.min(targetScaleX, targetScaleY)));
+
+        animateToMerc(targetCX, targetCY, targetScale);
     }
 
     private float screenX(double mercX) {
