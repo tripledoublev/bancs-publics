@@ -6,3 +6,4 @@ local.properties
 *.iml
 *.hprof
 data/geobase.json
+*.jks
