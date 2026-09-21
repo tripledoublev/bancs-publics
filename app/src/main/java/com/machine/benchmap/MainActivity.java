@@ -322,23 +322,18 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             String title = bench.getDisplayName();
             String locationDesc = !bench.borough.isEmpty() ? (title + ", " + bench.borough + " (Montréal)") : (title + " (Montréal)");
 
-            StringBuilder details = new StringBuilder();
-            details.append("Matériau: ").append(bench.getFormattedMaterial());
-            details.append(" • Dossier: ").append(bench.getFormattedBackrest());
-            if (bench.seats == 1) {
-                details.append(" • 1 place");
-            } else if (bench.seats > 1) {
-                details.append(" • ").append(bench.seats).append(" places");
-            } else {
-                details.append(" • Places: Standard");
-            }
+            String seatsStr = (bench.seats == 1) ? "1 place" : ((bench.seats > 1) ? (bench.seats + " places") : "Standard");
 
-            String shareText = String.format(Locale.US,
-                    "📍 %s\n%s\nCoordonnées: %.5f, %.5f\nhttps://maps.google.com/?q=%.5f,%.5f",
-                    locationDesc, details.toString(), bench.lat, bench.lon, bench.lat, bench.lon);
+            StringBuilder sb = new StringBuilder();
+            sb.append("📍 ").append(locationDesc).append("\n");
+            sb.append("Matériau: ").append(bench.getFormattedMaterial()).append("\n");
+            sb.append("Dossier: ").append(bench.getFormattedBackrest()).append("\n");
+            sb.append("Places: ").append(seatsStr).append("\n");
+            sb.append(String.format(Locale.US, "Coordonnées: %.5f, %.5f\n", bench.lat, bench.lon));
+            sb.append(String.format(Locale.US, "https://maps.google.com/?q=%.5f,%.5f", bench.lat, bench.lon));
 
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
-            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, sb.toString());
             sendIntent.setType("text/plain");
             startActivity(Intent.createChooser(sendIntent, "Partager l'emplacement du banc"));
         } catch (Exception e) {

@@ -4,7 +4,6 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -49,6 +48,7 @@ public class MontrealBenchMapView extends View {
     public static class GeometryLayer {
         public final float[] coords; // Flat Mercator radians [mx0, my0, mx1, my1, ...]
         public final float minX, maxX, minY, maxY;
+        public int frameId = 0;
 
         public GeometryLayer(float[] coords, float minX, float maxX, float minY, float maxY) {
             this.coords = coords;
@@ -56,6 +56,106 @@ public class MontrealBenchMapView extends View {
             this.maxX = maxX;
             this.minY = minY;
             this.maxY = maxY;
+        }
+    }
+
+    /**
+     * High-speed 2D uniform grid for culling tens of thousands of street segments.
+     * Prevents duplicate rendering across cell boundaries via frame IDs.
+     */
+    public static class SpatialStreetGrid {
+        private final int rows;
+        private final int cols;
+        private final float minX, maxX, minY, maxY;
+        private final float cellW, cellH;
+        private final List<GeometryLayer>[][] cells;
+        private int currentFrame = 1;
+
+        @SuppressWarnings("unchecked")
+        public SpatialStreetGrid(List<GeometryLayer> layers, int rows, int cols,
+                                 float minX, float maxX, float minY, float maxY) {
+            this.rows = rows;
+            this.cols = cols;
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.cellW = (maxX - minX) / cols;
+            this.cellH = (maxY - minY) / rows;
+            this.cells = new ArrayList[rows][cols];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    cells[r][c] = new ArrayList<>();
+                }
+            }
+
+            for (int i = 0; i < layers.size(); i++) {
+                GeometryLayer layer = layers.get(i);
+                int c0 = Math.max(0, Math.min(cols - 1, (int) ((layer.minX - minX) / cellW)));
+                int c1 = Math.max(0, Math.min(cols - 1, (int) ((layer.maxX - minX) / cellW)));
+                int r0 = Math.max(0, Math.min(rows - 1, (int) ((layer.minY - minY) / cellH)));
+                int r1 = Math.max(0, Math.min(rows - 1, (int) ((layer.maxY - minY) / cellH)));
+
+                for (int r = r0; r <= r1; r++) {
+                    for (int c = c0; c <= c1; c++) {
+                        cells[r][c].add(layer);
+                    }
+                }
+            }
+        }
+
+        public void drawVisible(Canvas canvas, float[] lineBuffer, Paint paint,
+                                double viewMinX, double viewMaxX, double viewMinY, double viewMaxY,
+                                float halfW, float halfH, double cX, double cY, float sc) {
+            int frame = ++currentFrame;
+            if (frame <= 0) {
+                currentFrame = 1;
+                frame = 1;
+            }
+
+            int c0 = Math.max(0, Math.min(cols - 1, (int) ((viewMinX - minX) / cellW)));
+            int c1 = Math.max(0, Math.min(cols - 1, (int) ((viewMaxX - minX) / cellW)));
+            int r0 = Math.max(0, Math.min(rows - 1, (int) ((viewMinY - minY) / cellH)));
+            int r1 = Math.max(0, Math.min(rows - 1, (int) ((viewMaxY - minY) / cellH)));
+
+            int bufIdx = 0;
+            int maxCap = lineBuffer.length;
+
+            for (int r = r0; r <= r1; r++) {
+                for (int c = c0; c <= c1; c++) {
+                    List<GeometryLayer> cellList = cells[r][c];
+                    int sz = cellList.size();
+                    for (int i = 0; i < sz; i++) {
+                        GeometryLayer layer = cellList.get(i);
+                        if (layer.frameId == frame) {
+                            continue;
+                        }
+                        layer.frameId = frame;
+
+                        if (layer.maxX < viewMinX || layer.minX > viewMaxX ||
+                                layer.maxY < viewMinY || layer.minY > viewMaxY) {
+                            continue;
+                        }
+
+                        float[] coords = layer.coords;
+                        int numPts = coords.length;
+                        for (int j = 0; j < numPts - 2; j += 2) {
+                            if (bufIdx + 4 > maxCap) {
+                                canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                bufIdx = 0;
+                            }
+                            lineBuffer[bufIdx++] = halfW + (float) ((coords[j] - cX) * sc);
+                            lineBuffer[bufIdx++] = halfH - (float) ((coords[j + 1] - cY) * sc);
+                            lineBuffer[bufIdx++] = halfW + (float) ((coords[j + 2] - cX) * sc);
+                            lineBuffer[bufIdx++] = halfH - (float) ((coords[j + 3] - cY) * sc);
+                        }
+                    }
+                }
+            }
+
+            if (bufIdx > 0) {
+                canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+            }
         }
     }
 
@@ -84,7 +184,6 @@ public class MontrealBenchMapView extends View {
     private final Paint paintBenchSelected = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelectedGap = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelectedCore = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint paintWalkLine = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // User Pin & Heading Cone Paints
     private final Paint paintPinFill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -137,6 +236,16 @@ public class MontrealBenchMapView extends View {
     private volatile SpatialBenchIndex spatialIndex = null;
     private volatile boolean isMapReady = false;
 
+    // Spatial street grids for instant zero-lag rendering
+    private static final float GRID_MIN_X = -1.2925f;
+    private static final float GRID_MAX_X = -1.2815f;
+    private static final float GRID_MIN_Y = 0.8895f;
+    private static final float GRID_MAX_Y = 0.9000f;
+
+    private SpatialStreetGrid majorGrid = null;
+    private SpatialStreetGrid minorGrid = null;
+    private final List<Bench> visibleBenches = new ArrayList<>(2048);
+
     // State
     private Bench selectedBench = null;
     private Location userLocation = null;
@@ -178,19 +287,19 @@ public class MontrealBenchMapView extends View {
         paintParkBorder.setStyle(Paint.Style.STROKE);
         paintParkBorder.setStrokeWidth(0.8f * density);
 
-        // Major Streets (Clean Slate 700)
+        // Major Streets (Clean Slate 700 - BUTT & MITER for high FPS GPU throughput)
         paintStreetMajor.setColor(COLOR_STREET_MAJOR);
         paintStreetMajor.setStyle(Paint.Style.STROKE);
         paintStreetMajor.setStrokeWidth(2.0f * density);
-        paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
-        paintStreetMajor.setStrokeJoin(Paint.Join.ROUND);
+        paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+        paintStreetMajor.setStrokeJoin(Paint.Join.MITER);
 
-        // Minor Streets (Subtle Hairline Slate 400)
+        // Minor Streets (Subtle Hairline Slate 400 - BUTT & MITER for high FPS GPU throughput)
         paintStreetMinor.setColor(COLOR_STREET_MINOR);
         paintStreetMinor.setStyle(Paint.Style.STROKE);
         paintStreetMinor.setStrokeWidth(1.1f * density);
-        paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
-        paintStreetMinor.setStrokeJoin(Paint.Join.ROUND);
+        paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
+        paintStreetMinor.setStrokeJoin(Paint.Join.MITER);
 
         // Benches
         paintBenchStreet.setColor(COLOR_BENCH_STREET);
@@ -210,12 +319,6 @@ public class MontrealBenchMapView extends View {
 
         paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
         paintBenchSelectedCore.setStyle(Paint.Style.FILL);
-
-        // Walk Guidance Line
-        paintWalkLine.setColor(COLOR_SWISS_RED);
-        paintWalkLine.setStyle(Paint.Style.STROKE);
-        paintWalkLine.setStrokeWidth(2.0f * density);
-        paintWalkLine.setPathEffect(new DashPathEffect(new float[]{10f * density, 8f * density}, 0));
 
         // User Swiss Pin
         paintPinFill.setColor(COLOR_SWISS_RED);
@@ -318,7 +421,7 @@ public class MontrealBenchMapView extends View {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 250 || now - lastScaleEndTime < 250) {
+                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100) {
                     return false;
                 }
 
@@ -334,7 +437,7 @@ public class MontrealBenchMapView extends View {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 250 || now - lastScaleEndTime < 250) {
+                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100) {
                     return false;
                 }
 
@@ -387,7 +490,7 @@ public class MontrealBenchMapView extends View {
         scaleDetector.onTouchEvent(event);
 
         long now = System.currentTimeMillis();
-        boolean recentlyPinched = (now - lastPointerUpTime < 350) || (now - lastScaleEndTime < 350);
+        boolean recentlyPinched = (now - lastPointerUpTime < 100) || (now - lastScaleEndTime < 100);
 
         if (event.getPointerCount() == 1 && !isScaling && !scaleDetector.isInProgress() && !recentlyPinched) {
             gestureDetector.onTouchEvent(event);
@@ -471,6 +574,8 @@ public class MontrealBenchMapView extends View {
                 }
 
                 SpatialBenchIndex newIndex = new SpatialBenchIndex(loadedBenches);
+                SpatialStreetGrid loadedMajorGrid = new SpatialStreetGrid(loadedMajor, 12, 12, GRID_MIN_X, GRID_MAX_X, GRID_MIN_Y, GRID_MAX_Y);
+                SpatialStreetGrid loadedMinorGrid = new SpatialStreetGrid(loadedMinor, 16, 16, GRID_MIN_X, GRID_MAX_X, GRID_MIN_Y, GRID_MAX_Y);
 
                 synchronized (dataLock) {
                     islandPolys.clear();
@@ -484,6 +589,8 @@ public class MontrealBenchMapView extends View {
                     allBenches.clear();
                     allBenches.addAll(loadedBenches);
                     spatialIndex = newIndex;
+                    majorGrid = loadedMajorGrid;
+                    minorGrid = loadedMinorGrid;
                     isMapReady = true;
                 }
 
@@ -669,11 +776,17 @@ public class MontrealBenchMapView extends View {
         // 1. Water Canvas Background
         canvas.drawColor(COLOR_WATER);
 
+        float halfW = w * 0.5f;
+        float halfH = h * 0.5f;
+        double cX = centerMercX;
+        double cY = centerMercY;
+        float sc = scale;
+
         // Viewport bounds in Mercator space
-        double viewMinX = screenToMercX(-40);
-        double viewMaxX = screenToMercX(w + 40);
-        double viewMinY = screenToMercY(h + 40);
-        double viewMaxY = screenToMercY(-40);
+        double viewMinX = cX + (-40f - halfW) / sc;
+        double viewMaxX = cX + (w + 40f - halfW) / sc;
+        double viewMinY = cY - (h + 40f - halfH) / sc;
+        double viewMaxY = cY - (-40f - halfH) / sc;
 
         synchronized (dataLock) {
             // 2. Island Landmass
@@ -683,9 +796,10 @@ public class MontrealBenchMapView extends View {
                     continue;
                 }
                 pathPoly.reset();
-                pathPoly.moveTo(screenX(poly.coords[0]), screenY(poly.coords[1]));
-                for (int j = 2; j < poly.coords.length; j += 2) {
-                    pathPoly.lineTo(screenX(poly.coords[j]), screenY(poly.coords[j + 1]));
+                float[] c = poly.coords;
+                pathPoly.moveTo(halfW + (float) ((c[0] - cX) * sc), halfH - (float) ((c[1] - cY) * sc));
+                for (int j = 2; j < c.length; j += 2) {
+                    pathPoly.lineTo(halfW + (float) ((c[j] - cX) * sc), halfH - (float) ((c[j + 1] - cY) * sc));
                 }
                 pathPoly.close();
                 canvas.drawPath(pathPoly, paintLand);
@@ -699,50 +813,60 @@ public class MontrealBenchMapView extends View {
                     continue;
                 }
                 pathPoly.reset();
-                pathPoly.moveTo(screenX(poly.coords[0]), screenY(poly.coords[1]));
-                for (int j = 2; j < poly.coords.length; j += 2) {
-                    pathPoly.lineTo(screenX(poly.coords[j]), screenY(poly.coords[j + 1]));
+                float[] c = poly.coords;
+                pathPoly.moveTo(halfW + (float) ((c[0] - cX) * sc), halfH - (float) ((c[1] - cY) * sc));
+                for (int j = 2; j < c.length; j += 2) {
+                    pathPoly.lineTo(halfW + (float) ((c[j] - cX) * sc), halfH - (float) ((c[j + 1] - cY) * sc));
                 }
                 pathPoly.close();
                 canvas.drawPath(pathPoly, paintPark);
-                if (scale > 180000f) {
+                if (sc > 180000f) {
                     canvas.drawPath(pathPoly, paintParkBorder);
                 }
             }
 
-            // 4. Minor Streets (Batch line rendering at neighbourhood zoom)
-            if (scale > 150000f) {
-                float minorWidth = (scale > 400000f) ? (1.3f * density) : (0.95f * density);
+            // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
+            if (sc > 150000f && minorGrid != null) {
+                float minorWidth = (sc > 400000f) ? (1.3f * density) : (0.95f * density);
                 paintStreetMinor.setStrokeWidth(minorWidth);
-                drawLayerLines(canvas, minorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMinor);
+                minorGrid.drawVisible(canvas, lineBuffer, paintStreetMinor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
             }
 
-            // 5. Major Streets (Batch line rendering across all zooms)
-            float majorWidth = (scale > 600000f) ? (2.4f * density)
-                    : ((scale > 200000f) ? (1.8f * density) : (1.3f * density));
-            paintStreetMajor.setStrokeWidth(majorWidth);
-            drawLayerLines(canvas, majorStreets, viewMinX, viewMaxX, viewMinY, viewMaxY, paintStreetMajor);
+            // 5. Major Streets (Spatially indexed batch lines across all zooms)
+            if (majorGrid != null) {
+                float majorWidth = (sc > 600000f) ? (2.4f * density)
+                        : ((sc > 200000f) ? (1.8f * density) : (1.3f * density));
+                paintStreetMajor.setStrokeWidth(majorWidth);
+                majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
+            }
 
-            // 6. Benches (Dynamic LOD)
-            float benchRadius = (scale > 1800000f) ? (5.0f * density)
-                    : ((scale > 600000f) ? (3.6f * density)
-                    : ((scale > 220000f) ? (2.5f * density) : (1.8f * density)));
+            // 6. Benches (Dynamic LOD with Uniform Spatial Grid)
+            float benchRadius = (sc > 1800000f) ? (5.0f * density)
+                    : ((sc > 600000f) ? (3.6f * density)
+                    : ((sc > 220000f) ? (2.5f * density) : (1.8f * density)));
 
-            int step = (scale < 85000f) ? 4 : ((scale < 160000f) ? 2 : 1);
-            for (int i = 0; i < allBenches.size(); i += step) {
-                Bench b = allBenches.get(i);
-                if (b.mercX < viewMinX || b.mercX > viewMaxX || b.mercY < viewMinY || b.mercY > viewMaxY) {
-                    continue;
+            int step = (sc < 85000f) ? 4 : ((sc < 160000f) ? 2 : 1);
+            visibleBenches.clear();
+            if (spatialIndex != null) {
+                double viewMinLon = Math.toDegrees(viewMinX);
+                double viewMaxLon = Math.toDegrees(viewMaxX);
+                double viewMinLat = Math.toDegrees(2.0 * Math.atan(Math.exp(viewMinY)) - Math.PI / 2.0);
+                double viewMaxLat = Math.toDegrees(2.0 * Math.atan(Math.exp(viewMaxY)) - Math.PI / 2.0);
+
+                spatialIndex.queryVisibleBenches(viewMinLat, viewMinLon, viewMaxLat, viewMaxLon, step, visibleBenches);
+                int numBenches = visibleBenches.size();
+                for (int i = 0; i < numBenches; i++) {
+                    Bench b = visibleBenches.get(i);
+                    float bx = halfW + (float) ((b.mercX - cX) * sc);
+                    float by = halfH - (float) ((b.mercY - cY) * sc);
+                    canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
                 }
-                float bx = screenX(b.mercX);
-                float by = screenY(b.mercY);
-                canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
             }
 
-            // 8. Selected Bench Highlight Ring
+            // 7. Selected Bench Highlight Ring
             if (selectedBench != null) {
-                float bx = screenX(selectedBench.mercX);
-                float by = screenY(selectedBench.mercY);
+                float bx = halfW + (float) ((selectedBench.mercX - cX) * sc);
+                float by = halfH - (float) ((selectedBench.mercY - cY) * sc);
 
                 canvas.drawCircle(bx, by, benchRadius + 7.5f * density, paintBenchSelected);
                 canvas.drawCircle(bx, by, benchRadius + 4.0f * density, paintBenchSelectedGap);
@@ -750,44 +874,11 @@ public class MontrealBenchMapView extends View {
             }
         }
 
-        // 9. User Precision Swiss Pin & Compass Heading Cone
+        // 8. User Precision Swiss Pin & Compass Heading Cone
         if (userLocation != null) {
-            float ux = screenX(lonToMercatorX(userLocation.getLongitude()));
-            float uy = screenY(latToMercatorY(userLocation.getLatitude()));
+            float ux = halfW + (float) ((lonToMercatorX(userLocation.getLongitude()) - cX) * sc);
+            float uy = halfH - (float) ((latToMercatorY(userLocation.getLatitude()) - cY) * sc);
             drawUserPin(canvas, ux, uy, userLocation.hasAccuracy() ? userLocation.getAccuracy() : 0);
-        }
-    }
-
-    /**
-     * Hardware-accelerated drawLines using pre-allocated float buffer.
-     */
-    private void drawLayerLines(Canvas canvas, List<GeometryLayer> layers,
-                                double minX, double maxX, double minY, double maxY, Paint paint) {
-        int bufIdx = 0;
-        int maxCap = lineBuffer.length;
-
-        for (int i = 0; i < layers.size(); i++) {
-            GeometryLayer layer = layers.get(i);
-            if (layer.maxX < minX || layer.minX > maxX || layer.maxY < minY || layer.minY > maxY) {
-                continue;
-            }
-
-            float[] c = layer.coords;
-            int numPts = c.length;
-            for (int j = 0; j < numPts - 2; j += 2) {
-                if (bufIdx + 4 > maxCap) {
-                    canvas.drawLines(lineBuffer, 0, bufIdx, paint);
-                    bufIdx = 0;
-                }
-                lineBuffer[bufIdx++] = screenX(c[j]);
-                lineBuffer[bufIdx++] = screenY(c[j + 1]);
-                lineBuffer[bufIdx++] = screenX(c[j + 2]);
-                lineBuffer[bufIdx++] = screenY(c[j + 3]);
-            }
-        }
-
-        if (bufIdx > 0) {
-            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
         }
     }
 

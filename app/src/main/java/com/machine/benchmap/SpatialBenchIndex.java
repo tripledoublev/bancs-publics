@@ -60,6 +60,29 @@ public class SpatialBenchIndex {
     }
 
     /**
+     * Efficient range query for visible benches during rendering.
+     */
+    public void queryVisibleBenches(double minLat, double minLon, double maxLat, double maxLon, int step, List<Bench> result) {
+        int r0 = Math.max(0, Math.min(numRows - 1, getRow(minLat)));
+        int r1 = Math.max(0, Math.min(numRows - 1, getRow(maxLat)));
+        int c0 = Math.max(0, Math.min(numCols - 1, getCol(minLon)));
+        int c1 = Math.max(0, Math.min(numCols - 1, getCol(maxLon)));
+
+        for (int r = r0; r <= r1; r++) {
+            for (int c = c0; c <= c1; c++) {
+                List<Bench> cell = grid[r][c];
+                int sz = cell.size();
+                for (int i = 0; i < sz; i += step) {
+                    Bench b = cell.get(i);
+                    if (b.lat >= minLat && b.lat <= maxLat && b.lon >= minLon && b.lon <= maxLon) {
+                        result.add(b);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Fast tap hit-testing within a pixel radius in Mercator space.
      */
     public Bench findTapHit(double mercX, double mercY, double searchRadiusMerc) {
