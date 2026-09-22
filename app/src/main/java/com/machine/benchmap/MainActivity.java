@@ -677,6 +677,54 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 ((lastLocation != null) ? lastLocation.getLongitude() : MontrealBenchMapView.CENTER_LON);
         final String baseName = (currentlySelectedBench != null) ? currentlySelectedBench.getDisplayName() : "Montréal";
 
+        // Dynamic theme styling for dialog
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+
+        View dialogRoot = view.findViewById(R.id.dialog_meetup_root);
+        TextView tvDialogTitle = view.findViewById(R.id.tv_dialog_title);
+        if (dialogRoot != null) {
+            GradientDrawable dialogBgDrawable = new GradientDrawable();
+            dialogBgDrawable.setColor(bgDialog);
+            dialogBgDrawable.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            dialogRoot.setBackground(dialogBgDrawable);
+        }
+        if (tvDialogTitle != null) {
+            tvDialogTitle.setTextColor(textPri);
+        }
+        if (btnDialogClose != null) {
+            btnDialogClose.setColorFilter(textSec);
+        }
+        View boxKeyDisplay = view.findViewById(R.id.box_key_display);
+        if (boxKeyDisplay != null) {
+            GradientDrawable boxBgDrawable = new GradientDrawable();
+            boxBgDrawable.setColor(boxBg);
+            boxBgDrawable.setCornerRadius(20);
+            boxBgDrawable.setStroke(2, borderC);
+            boxKeyDisplay.setBackground(boxBgDrawable);
+        }
+        if (tvGeneratedKey != null) {
+            tvGeneratedKey.setTextColor(textPri);
+        }
+        if (etFriendKey != null) {
+            GradientDrawable etBgDrawable = new GradientDrawable();
+            etBgDrawable.setColor(boxBg);
+            etBgDrawable.setCornerRadius(20);
+            etBgDrawable.setStroke(2, borderC);
+            etFriendKey.setBackground(etBgDrawable);
+            etFriendKey.setTextColor(textPri);
+            etFriendKey.setHintTextColor(textSec);
+        }
+        dialog.setOnShowListener(d -> {
+            View bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                bottomSheet.setBackgroundColor(Color.TRANSPARENT);
+            }
+        });
+
         final int[] blurSetting = new int[]{selectedBlurRadius};
 
         Runnable updateKeyDisplay = () -> {
