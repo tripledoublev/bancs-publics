@@ -5,8 +5,10 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.DiscretePathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PathEffect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.location.Location;
@@ -109,7 +111,8 @@ public class MontrealBenchMapView extends View {
 
         public void drawVisible(Canvas canvas, float[] lineBuffer, Paint paint,
                                 double viewMinX, double viewMaxX, double viewMinY, double viewMaxY,
-                                float halfW, float halfH, double cX, double cY, float sc) {
+                                float halfW, float halfH, double cX, double cY, float sc,
+                                MapRenderStyle style, float density) {
             int frame = ++currentFrame;
             if (frame <= 0) {
                 currentFrame = 1;
@@ -123,6 +126,14 @@ public class MontrealBenchMapView extends View {
 
             int bufIdx = 0;
             int maxCap = lineBuffer.length;
+
+            boolean isDashed = (style == MapRenderStyle.DASHED_CADASTRAL);
+            boolean isDotted = (style == MapRenderStyle.DOTTED_MATRIX);
+            boolean isBrush = (style == MapRenderStyle.ARTISTIC_BRUSH);
+
+            float dashLen = 9f * density;
+            float gapLen = 6f * density;
+            float dotStep = 7.5f * density;
 
             for (int r = r0; r <= r1; r++) {
                 for (int c = c0; c <= c1; c++) {
@@ -143,14 +154,92 @@ public class MontrealBenchMapView extends View {
                         float[] coords = layer.coords;
                         int numPts = coords.length;
                         for (int j = 0; j < numPts - 2; j += 2) {
-                            if (bufIdx + 4 > maxCap) {
-                                canvas.drawLines(lineBuffer, 0, bufIdx, paint);
-                                bufIdx = 0;
+                            float x0 = halfW + (float) ((coords[j] - cX) * sc);
+                            float y0 = halfH - (float) ((coords[j + 1] - cY) * sc);
+                            float x1 = halfW + (float) ((coords[j + 2] - cX) * sc);
+                            float y1 = halfH - (float) ((coords[j + 3] - cY) * sc);
+
+                            if (isDashed) {
+                                float dx = x1 - x0;
+                                float dy = y1 - y0;
+                                float len = (float) Math.hypot(dx, dy);
+                                if (len <= dashLen + gapLen) {
+                                    if (bufIdx + 4 > maxCap) {
+                                        canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                        bufIdx = 0;
+                                    }
+                                    lineBuffer[bufIdx++] = x0;
+                                    lineBuffer[bufIdx++] = y0;
+                                    lineBuffer[bufIdx++] = x1;
+                                    lineBuffer[bufIdx++] = y1;
+                                } else {
+                                    float nx = dx / len;
+                                    float ny = dy / len;
+                                    float t = 0f;
+                                    while (t < len) {
+                                        float tEnd = Math.min(len, t + dashLen);
+                                        if (bufIdx + 4 > maxCap) {
+                                            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                            bufIdx = 0;
+                                        }
+                                        lineBuffer[bufIdx++] = x0 + nx * t;
+                                        lineBuffer[bufIdx++] = y0 + ny * t;
+                                        lineBuffer[bufIdx++] = x0 + nx * tEnd;
+                                        lineBuffer[bufIdx++] = y0 + ny * tEnd;
+                                        t += dashLen + gapLen;
+                                    }
+                                }
+                            } else if (isDotted) {
+                                float dx = x1 - x0;
+                                float dy = y1 - y0;
+                                float len = (float) Math.hypot(dx, dy);
+                                if (len <= dotStep) {
+                                    if (bufIdx + 4 > maxCap) {
+                                        canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                        bufIdx = 0;
+                                    }
+                                    lineBuffer[bufIdx++] = x0;
+                                    lineBuffer[bufIdx++] = y0;
+                                    lineBuffer[bufIdx++] = x0;
+                                    lineBuffer[bufIdx++] = y0;
+                                } else {
+                                    float nx = dx / len;
+                                    float ny = dy / len;
+                                    float t = 0f;
+                                    while (t <= len) {
+                                        if (bufIdx + 4 > maxCap) {
+                                            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                            bufIdx = 0;
+                                        }
+                                        float px = x0 + nx * t;
+                                        float py = y0 + ny * t;
+                                        lineBuffer[bufIdx++] = px;
+                                        lineBuffer[bufIdx++] = py;
+                                        lineBuffer[bufIdx++] = px;
+                                        lineBuffer[bufIdx++] = py;
+                                        t += dotStep;
+                                    }
+                                }
+                            } else if (isBrush) {
+                                float jitter = ((float) Math.sin(coords[j] * 20000.0 + coords[j + 1] * 20000.0)) * 0.75f * density;
+                                if (bufIdx + 4 > maxCap) {
+                                    canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                    bufIdx = 0;
+                                }
+                                lineBuffer[bufIdx++] = x0 + jitter;
+                                lineBuffer[bufIdx++] = y0 - jitter;
+                                lineBuffer[bufIdx++] = x1 - jitter;
+                                lineBuffer[bufIdx++] = y1 + jitter;
+                            } else {
+                                if (bufIdx + 4 > maxCap) {
+                                    canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                    bufIdx = 0;
+                                }
+                                lineBuffer[bufIdx++] = x0;
+                                lineBuffer[bufIdx++] = y0;
+                                lineBuffer[bufIdx++] = x1;
+                                lineBuffer[bufIdx++] = y1;
                             }
-                            lineBuffer[bufIdx++] = halfW + (float) ((coords[j] - cX) * sc);
-                            lineBuffer[bufIdx++] = halfH - (float) ((coords[j + 1] - cY) * sc);
-                            lineBuffer[bufIdx++] = halfW + (float) ((coords[j + 2] - cX) * sc);
-                            lineBuffer[bufIdx++] = halfH - (float) ((coords[j + 3] - cY) * sc);
                         }
                     }
                 }
@@ -254,6 +343,19 @@ public class MontrealBenchMapView extends View {
     private final Path compassNorthPath = new Path();
     private final Path compassSouthPath = new Path();
 
+    // Map Render Style & Daily Rotation
+    private MapRenderStyle currentStyle = MapRenderStyle.SWISS_CLEAN;
+    private boolean isDailyAuto = true;
+    private final Paint paintStreetCasingCore = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    // Pre-allocated PathEffects for MapRenderStyle
+    private PathEffect effectDashedShoreline;
+    private PathEffect effectDashedPark;
+    private PathEffect effectDottedShoreline;
+    private PathEffect effectDottedPark;
+    private PathEffect effectBrushShoreline;
+    private PathEffect effectBrushPark;
+
     // Geographic center of Montreal (Mount Royal)
     public static final double CENTER_LAT = 45.50884;
     public static final double CENTER_LON = -73.58781;
@@ -345,6 +447,19 @@ public class MontrealBenchMapView extends View {
         paintStreetMinor.setStrokeWidth(0.75f * density);
         paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
         paintStreetMinor.setStrokeJoin(Paint.Join.MITER);
+
+        // Major Streets Casing Core (for DOUBLE_CASING boulevard style)
+        paintStreetCasingCore.setStyle(Paint.Style.STROKE);
+        paintStreetCasingCore.setStrokeCap(Paint.Cap.BUTT);
+        paintStreetCasingCore.setStrokeJoin(Paint.Join.MITER);
+
+        // Reusable Map Style PathEffects
+        effectDashedShoreline = new DashPathEffect(new float[]{14f * density, 8f * density}, 0);
+        effectDashedPark = new DashPathEffect(new float[]{8f * density, 6f * density}, 0);
+        effectDottedShoreline = new DashPathEffect(new float[]{2.5f * density, 5.5f * density}, 0);
+        effectDottedPark = new DashPathEffect(new float[]{2.0f * density, 5.0f * density}, 0);
+        effectBrushShoreline = new DiscretePathEffect(14f * density, 3.5f * density);
+        effectBrushPark = new DiscretePathEffect(10f * density, 2.5f * density);
 
         // Benches
         paintBenchStreet.setStyle(Paint.Style.FILL);
@@ -499,6 +614,116 @@ public class MontrealBenchMapView extends View {
 
         paintMeetupBenchHalo.setColor(Color.parseColor("#F59E0B"));
         paintMeetupBenchCore.setColor(Color.parseColor("#F59E0B"));
+        paintStreetCasingCore.setColor(isDarkMode ? DARK_LAND : LIGHT_LAND);
+
+        updatePaintsForStyle();
+    }
+
+    public void setRenderStyle(MapRenderStyle style, boolean dailyAuto) {
+        this.currentStyle = (style != null) ? style : MapRenderStyle.SWISS_CLEAN;
+        this.isDailyAuto = dailyAuto;
+        applyThemeColors();
+        invalidate();
+    }
+
+    public MapRenderStyle getRenderStyle() {
+        return currentStyle;
+    }
+
+    public boolean isDailyAuto() {
+        return isDailyAuto;
+    }
+
+    public MapRenderStyle getActiveEffectiveStyle() {
+        return isDailyAuto ? MapRenderStyle.getDailyStyle() : currentStyle;
+    }
+
+    private void updatePaintsForStyle() {
+        MapRenderStyle style = getActiveEffectiveStyle();
+
+        // Reset path effects and stroke caps by default
+        paintShoreline.setPathEffect(null);
+        paintParkBorder.setPathEffect(null);
+        paintStreetMajor.setPathEffect(null);
+        paintStreetMinor.setPathEffect(null);
+        paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+        paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
+
+        switch (style) {
+            case THIN_ARCHITECTURAL:
+                paintShoreline.setStrokeWidth(0.65f * density);
+                paintParkBorder.setStrokeWidth(0.45f * density);
+                break;
+
+            case BOLD_BAUHAUS:
+                paintShoreline.setStrokeWidth(2.8f * density);
+                paintParkBorder.setStrokeWidth(1.6f * density);
+                break;
+
+            case DASHED_CADASTRAL:
+                paintShoreline.setStrokeWidth(1.2f * density);
+                paintShoreline.setPathEffect(effectDashedShoreline);
+                paintParkBorder.setStrokeWidth(0.9f * density);
+                paintParkBorder.setPathEffect(effectDashedPark);
+                break;
+
+            case DOTTED_MATRIX:
+                paintShoreline.setStrokeWidth(2.2f * density);
+                paintShoreline.setStrokeCap(Paint.Cap.ROUND);
+                paintShoreline.setPathEffect(effectDottedShoreline);
+                paintParkBorder.setStrokeWidth(1.8f * density);
+                paintParkBorder.setStrokeCap(Paint.Cap.ROUND);
+                paintParkBorder.setPathEffect(effectDottedPark);
+                paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
+                paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
+                break;
+
+            case ARTISTIC_BRUSH:
+                paintShoreline.setStrokeWidth(1.8f * density);
+                paintShoreline.setStrokeCap(Paint.Cap.ROUND);
+                paintShoreline.setPathEffect(effectBrushShoreline);
+                paintParkBorder.setStrokeWidth(1.2f * density);
+                paintParkBorder.setStrokeCap(Paint.Cap.ROUND);
+                paintParkBorder.setPathEffect(effectBrushPark);
+                paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
+                paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
+                break;
+
+            case DOUBLE_CASING:
+                paintShoreline.setStrokeWidth(1.2f * density);
+                paintParkBorder.setStrokeWidth(0.85f * density);
+                break;
+
+            case DESATURATED_NOIR:
+                paintShoreline.setStrokeWidth(1.1f * density);
+                paintParkBorder.setStrokeWidth(0.75f * density);
+                if (isDarkMode) {
+                    paintLand.setColor(Color.parseColor("#121214"));
+                    paintShoreline.setColor(Color.parseColor("#323238"));
+                    paintPark.setColor(Color.parseColor("#18181B"));
+                    paintParkBorder.setColor(Color.parseColor("#27272A"));
+                    paintStreetMajor.setColor(Color.parseColor("#71717A"));
+                    paintStreetMinor.setColor(Color.parseColor("#2E2E33"));
+                    paintBenchStreet.setColor(Color.parseColor("#E4E4E7"));
+                    paintBenchPark.setColor(Color.parseColor("#D4D4D8"));
+                } else {
+                    paintLand.setColor(Color.parseColor("#FAFAFA"));
+                    paintShoreline.setColor(Color.parseColor("#D4D4D8"));
+                    paintPark.setColor(Color.parseColor("#F0F0F2"));
+                    paintParkBorder.setColor(Color.parseColor("#E4E4E7"));
+                    paintStreetMajor.setColor(Color.parseColor("#52525B"));
+                    paintStreetMinor.setColor(Color.parseColor("#A1A1AA"));
+                    paintBenchStreet.setColor(Color.parseColor("#18181B"));
+                    paintBenchPark.setColor(Color.parseColor("#27272A"));
+                }
+                break;
+
+            case SWISS_CLEAN:
+            default:
+                paintShoreline.setStrokeWidth(1.1f * density);
+                paintParkBorder.setStrokeWidth(0.75f * density);
+                break;
+        }
     }
 
     private void initGestures() {
@@ -1087,18 +1312,61 @@ public class MontrealBenchMapView extends View {
 
             // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
             // Clutter-free island overview: only reveal minor streets when zooming into neighbourhoods
+            MapRenderStyle activeStyle = getActiveEffectiveStyle();
+
+            // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
+            // Clutter-free island overview: only reveal minor streets when zooming into neighbourhoods
             if (sc > 340000f && minorGrid != null) {
-                float minorWidth = (sc > 800000f) ? (1.0f * density) : (0.75f * density);
+                float minorWidth;
+                switch (activeStyle) {
+                    case THIN_ARCHITECTURAL:
+                        minorWidth = (sc > 800000f) ? (0.6f * density) : (0.4f * density);
+                        break;
+                    case BOLD_BAUHAUS:
+                        minorWidth = (sc > 800000f) ? (1.8f * density) : (1.4f * density);
+                        break;
+                    case DOTTED_MATRIX:
+                        minorWidth = (sc > 800000f) ? (1.6f * density) : (1.2f * density);
+                        break;
+                    default:
+                        minorWidth = (sc > 800000f) ? (1.0f * density) : (0.75f * density);
+                        break;
+                }
                 paintStreetMinor.setStrokeWidth(minorWidth);
-                minorGrid.drawVisible(canvas, lineBuffer, paintStreetMinor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
+                minorGrid.drawVisible(canvas, lineBuffer, paintStreetMinor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, activeStyle, density);
             }
 
             // 5. Major Streets (Spatially indexed arterial lines across all zooms)
             if (majorGrid != null) {
-                float majorWidth = (sc > 600000f) ? (2.2f * density)
-                        : ((sc > 240000f) ? (1.5f * density) : (1.1f * density));
-                paintStreetMajor.setStrokeWidth(majorWidth);
-                majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc);
+                if (activeStyle == MapRenderStyle.DOUBLE_CASING && sc > 180000f) {
+                    // Double casing: Pass 1 outer casing
+                    float casingWidth = (sc > 600000f) ? (4.2f * density) : ((sc > 240000f) ? (3.2f * density) : (2.4f * density));
+                    paintStreetMajor.setStrokeWidth(casingWidth);
+                    majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
+
+                    // Pass 2 inner core (matching land fill)
+                    float coreWidth = (sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.6f * density) : (1.1f * density));
+                    paintStreetCasingCore.setStrokeWidth(coreWidth);
+                    majorGrid.drawVisible(canvas, lineBuffer, paintStreetCasingCore, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
+                } else {
+                    float majorWidth;
+                    switch (activeStyle) {
+                        case THIN_ARCHITECTURAL:
+                            majorWidth = (sc > 600000f) ? (1.3f * density) : ((sc > 240000f) ? (0.9f * density) : (0.65f * density));
+                            break;
+                        case BOLD_BAUHAUS:
+                            majorWidth = (sc > 600000f) ? (3.8f * density) : ((sc > 240000f) ? (2.8f * density) : (2.0f * density));
+                            break;
+                        case DOTTED_MATRIX:
+                            majorWidth = (sc > 600000f) ? (2.6f * density) : ((sc > 240000f) ? (1.9f * density) : (1.4f * density));
+                            break;
+                        default:
+                            majorWidth = (sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.5f * density) : (1.1f * density));
+                            break;
+                    }
+                    paintStreetMajor.setStrokeWidth(majorWidth);
+                    majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, activeStyle, density);
+                }
             }
 
             // 6. Benches (Progressive Density LOD & Halo Badges)
@@ -1123,6 +1391,12 @@ public class MontrealBenchMapView extends View {
                 step = 1;
                 benchRadius = 4.8f * density;
                 drawHalo = true;
+            }
+
+            if (activeStyle == MapRenderStyle.BOLD_BAUHAUS) {
+                benchRadius = benchRadius * 1.25f;
+            } else if (activeStyle == MapRenderStyle.THIN_ARCHITECTURAL) {
+                benchRadius = benchRadius * 0.85f;
             }
 
             visibleBenches.clear();

@@ -1,5 +1,7 @@
 # BenchMap (Les bancs de Montréal) 🪑
 
+> *Une cartographie vectorielle indigène, souveraine et 100% hors-ligne des 9 602 bancs publics de l'Île de Montréal. Conçue dans la pure tradition du style graphique suisse : rigueur géométrique, typographie concise, zéro télémétrie et respect intégral de la vie privée.*
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android_10+-3DDC84.svg?logo=android&logoColor=white)](https://android.com)
 [![Offline First](https://img.shields.io/badge/Architecture-100%25_Offline_Vector-black.svg)]()
@@ -9,9 +11,23 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 
 ---
 
-## Features
+## Features / Fonctionnalités
 
-- **100% Offline Vector Rendering**: Custom Canvas engine rendering 37 borough polygons, 1,648 municipal parks, 29,708 street segments, and 9,602 benches via OpenGL `drawLines` hardware batching.
+- **100% Offline Vector Rendering**: Custom Canvas engine rendering authentic physical island shorelines (Île de Montréal, Île des Sœurs, Île Sainte-Hélène, Île Notre-Dame, Île Bizard, Île de la Visitation), 1,648 municipal parks, 29,708 street segments, and 9,602 benches via OpenGL `drawLines` hardware batching.
+- **🎨 8 Styles Cartographiques & Rotation Quotidienne**:
+  - Un style graphique différent chaque jour de la semaine ou sélection manuelle :
+    - *Swiss Clean* (Standard architectural)
+    - *Architectural Hairline* (Lignes fines de dessin technique)
+    - *Bauhaus Gras* (Postérisation graphique affirmée)
+    - *Cadastre Tireté* (Lignes pointillées cadastre)
+    - *Double Casing* (Boulevards et avenues à double tracé)
+    - *Tracé Artistique* (Esquisse organique et traits vivants)
+    - *Matrice Pointillée* (Texture pointilliste)
+    - *Noir Argentique* (Monochrome contrasté)
+- **👆 Gestuelle Fluide & Boussole Interactive**:
+  - **Double-tap zoom** : Zoom instantané et centrage fluide sur la zone tapée.
+  - **Rotation à 2 doigts** : Orientation de la carte avec retour haptique d'alignement au Nord.
+  - **Boussole Swiss** : Indique le Nord magnétique en continu ; un simple tap réinitialise l'orientation au Nord et effectue un zoom avant.
 - **Ultra-Fast Binary Map Format**: Custom IEEE 754 float binary format (`montreal_map.bin`) loads the complete municipal bench cartography in **<70 ms** with zero JSON garbage collection overhead.
 - **Dual Swiss Themes**:
   - **Nordic Paper & Precision Ink (Light)**: Warm architectural paper, sage green parks, crisp arterial slate lines, and deep charcoal bench markers.
@@ -27,7 +43,6 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - **Privacy Blur Levels**: Choose exact coordinates, subtle ~150 m street blur, or ~300 m neighborhood blur to protect home address privacy.
   - **Fair Halfway Filtering**: Mathematical fairness algorithm finds candidate benches located at the exact halfway midpoint between both friends, minimizing walking time disparity.
   - **Interactive Meetup Mode**: Live geodesic connecting axis, Cobalt Blue friend pin, glowing amber candidate halos, and real-time travel comparison (`Vous: 1,4 km • Ami: 1,4 km (Écart: 20 m)`).
-- **Compass & Orientation Cone**: Native hardware rotation vector sensor drives real-time walking heading and location accuracy halos.
 - **100% Private & Open Source**: No tracking, no analytics, no ads, no cloud accounts, and no Google Play Services dependencies.
 
 ---

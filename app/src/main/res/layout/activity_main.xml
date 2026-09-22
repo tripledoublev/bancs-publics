@@ -82,6 +82,16 @@
 
                 <!-- Action icons cluster -->
                 <ImageView
+                    android:id="@+id/btn_map_style"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Styles de rendu cartographique"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_palette" />
+
+                <ImageView
                     android:id="@+id/btn_collections"
                     android:layout_width="38dp"
                     android:layout_height="38dp"

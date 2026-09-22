@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -57,6 +58,7 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -81,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "benchmap_prefs";
     private static final String PREF_DARK_MODE = "key_dark_mode";
+    private static final String PREF_RENDER_STYLE = "key_render_style";
 
     private MontrealBenchMapView benchMapView;
     private View layoutHeader;
@@ -90,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     // Header Swiss elements
     private MaterialCardView cardHeader;
     private View layoutCounterBadge;
+    private ImageView btnMapStyle;
     private ImageView btnCollections;
     private ImageView btnThemeToggle;
     private ImageView btnMeetup;
@@ -197,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         bindViews();
         setupWindowInsets();
         initTheme();
+        initRenderStyle();
         setupActions();
 
         benchMapView.setMapListener(this);
@@ -218,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         layoutCounterBadge = findViewById(R.id.layout_counter_badge);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
+        btnMapStyle = findViewById(R.id.btn_map_style);
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
         btnMeetup = findViewById(R.id.btn_meetup);
         btnCollections = findViewById(R.id.btn_collections);
@@ -334,6 +340,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (btnCollections != null) {
             btnCollections.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318")));
+        }
+        if (btnMapStyle != null) {
+            btnMapStyle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318")));
         }
 
         // Rendez-vous Banner Styling
@@ -518,6 +527,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             btnCollections.setOnClickListener(v -> {
                 triggerHapticTick();
                 showCollectionsDialog();
+            });
+        }
+
+        if (btnMapStyle != null) {
+            btnMapStyle.setOnClickListener(v -> {
+                triggerHapticTick();
+                showMapStylesDialog();
             });
         }
 
@@ -786,6 +802,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (intent.getBooleanExtra("test_compass_tap", false)) {
             Log.d("BenchMap", "handleIntent: triggering test_compass_tap");
             benchMapView.post(() -> benchMapView.onCompassTapped());
+        }
+        if (intent.hasExtra("test_style")) {
+            String testStyle = intent.getStringExtra("test_style");
+            if (testStyle != null) {
+                Log.d("BenchMap", "handleIntent: applying test_style=" + testStyle);
+                benchMapView.post(() -> benchMapView.setRenderStyle(MapRenderStyle.fromId(testStyle), false));
+            }
         }
         if (intent.getData() == null) return;
         Uri data = intent.getData();
@@ -2214,6 +2237,144 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (requestCode == PERMISSION_REQ_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startLocationUpdates();
         }
+    }
+
+    private void initRenderStyle() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String savedStyle = prefs.getString(PREF_RENDER_STYLE, "auto");
+        if ("auto".equalsIgnoreCase(savedStyle)) {
+            benchMapView.setRenderStyle(MapRenderStyle.getDailyStyle(), true);
+        } else {
+            benchMapView.setRenderStyle(MapRenderStyle.fromId(savedStyle), false);
+        }
+    }
+
+    private void showMapStylesDialog() {
+        final BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_map_styles, null);
+        dialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#101828");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int cardBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F8F9FA");
+        int borderC = isDarkMode ? Color.parseColor("#2C303B") : Color.parseColor("#E4E7EC");
+
+        View root = view.findViewById(R.id.dialog_styles_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(24 * d));
+            return insets;
+        });
+
+        dialog.setOnShowListener(d -> {
+            View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
+            }
+        });
+
+        TextView tvTitle = view.findViewById(R.id.tv_styles_title);
+        TextView tvSubtitle = view.findViewById(R.id.tv_styles_subtitle);
+        tvTitle.setTextColor(textPri);
+        tvSubtitle.setTextColor(textSec);
+
+        MaterialCardView cardDaily = view.findViewById(R.id.card_daily_rotation);
+        cardDaily.setCardBackgroundColor(cardBg);
+        cardDaily.setStrokeColor(borderC);
+
+        TextView tvDailyTitle = view.findViewById(R.id.tv_daily_switch_title);
+        TextView tvDailySub = view.findViewById(R.id.tv_daily_switch_sub);
+        tvDailyTitle.setTextColor(textPri);
+        tvDailySub.setTextColor(textSec);
+
+        SwitchMaterial switchDaily = view.findViewById(R.id.switch_daily_auto);
+        switchDaily.setChecked(benchMapView.isDailyAuto());
+
+        LinearLayout layoutList = view.findViewById(R.id.layout_styles_list);
+        layoutList.removeAllViews();
+
+        MapRenderStyle todayStyle = MapRenderStyle.getDailyStyle();
+        boolean isAuto = benchMapView.isDailyAuto();
+
+        MapRenderStyle[] allStyles = MapRenderStyle.values();
+
+        for (MapRenderStyle style : allStyles) {
+            View itemView = getLayoutInflater().inflate(R.layout.item_map_style, layoutList, false);
+            MaterialCardView cardItem = itemView.findViewById(R.id.card_style_item);
+            TextView tvEmoji = itemView.findViewById(R.id.tv_style_emoji);
+            TextView tvItemTitle = itemView.findViewById(R.id.tv_style_title);
+            TextView tvItemSub = itemView.findViewById(R.id.tv_style_subtitle);
+            TextView badgeToday = itemView.findViewById(R.id.badge_today);
+            ImageView ivCheck = itemView.findViewById(R.id.iv_style_check);
+
+            tvEmoji.setText(style.emoji);
+            tvItemTitle.setText(style.title);
+            tvItemTitle.setTextColor(textPri);
+            tvItemSub.setText(style.subtitle);
+            tvItemSub.setTextColor(textSec);
+            cardItem.setCardBackgroundColor(cardBg);
+            cardItem.setStrokeColor(borderC);
+
+            if (style == todayStyle) {
+                badgeToday.setVisibility(View.VISIBLE);
+            } else {
+                badgeToday.setVisibility(View.GONE);
+            }
+
+            boolean isSelected = (!isAuto && benchMapView.getRenderStyle() == style) || (isAuto && style == todayStyle);
+            ivCheck.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+            if (isSelected) {
+                cardItem.setStrokeColor(Color.parseColor("#E52B35"));
+            }
+
+            cardItem.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                benchMapView.setRenderStyle(style, false);
+
+                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString(PREF_RENDER_STYLE, style.id)
+                        .apply();
+
+                dialog.dismiss();
+                Toast.makeText(this, "Style appliqué : " + style.title, Toast.LENGTH_SHORT).show();
+            });
+
+            layoutList.addView(itemView);
+        }
+
+        switchDaily.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            buttonView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            if (isChecked) {
+                benchMapView.setRenderStyle(MapRenderStyle.getDailyStyle(), true);
+                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString(PREF_RENDER_STYLE, "auto")
+                        .apply();
+                dialog.dismiss();
+                Toast.makeText(this, "Rotation quotidienne activée (" + todayStyle.title + ")", Toast.LENGTH_SHORT).show();
+            } else {
+                benchMapView.setRenderStyle(benchMapView.getRenderStyle(), false);
+                getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putString(PREF_RENDER_STYLE, benchMapView.getRenderStyle().id)
+                        .apply();
+            }
+        });
+
+        dialog.show();
     }
 
     @Override
