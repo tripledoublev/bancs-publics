@@ -363,9 +363,9 @@ public class MontrealBenchMapView extends View {
     private double centerMercY = latToMercatorY(CENTER_LAT);
 
     // Zoom & Limits
-    private static final float MIN_SCALE = 55000f;     // Whole metropolitan island
-    private static final float MAX_SCALE = 9000000f;   // Sub-meter street resolution
-    private float scale = 220000f;                     // Default Montreal overview
+    private static final float MIN_SCALE = 55000f;      // Whole metropolitan island
+    private static final float MAX_SCALE = 65000000f;   // Deep architectural resolution (~70m street width)
+    private float scale = 220000f;                      // Default Montreal overview
     private float density = 1.0f;
 
     // Gestures & Physics
@@ -1320,16 +1320,16 @@ public class MontrealBenchMapView extends View {
                 float minorWidth;
                 switch (activeStyle) {
                     case THIN_ARCHITECTURAL:
-                        minorWidth = (sc > 800000f) ? (0.6f * density) : (0.4f * density);
+                        minorWidth = (sc > 3000000f) ? (1.0f * density) : ((sc > 800000f) ? (0.6f * density) : (0.4f * density));
                         break;
                     case BOLD_BAUHAUS:
-                        minorWidth = (sc > 800000f) ? (1.8f * density) : (1.4f * density);
+                        minorWidth = (sc > 3000000f) ? (2.8f * density) : ((sc > 800000f) ? (1.8f * density) : (1.4f * density));
                         break;
                     case DOTTED_MATRIX:
-                        minorWidth = (sc > 800000f) ? (1.6f * density) : (1.2f * density);
+                        minorWidth = (sc > 3000000f) ? (2.2f * density) : ((sc > 800000f) ? (1.6f * density) : (1.2f * density));
                         break;
                     default:
-                        minorWidth = (sc > 800000f) ? (1.0f * density) : (0.75f * density);
+                        minorWidth = (sc > 3000000f) ? (1.6f * density) : ((sc > 800000f) ? (1.0f * density) : (0.75f * density));
                         break;
                 }
                 paintStreetMinor.setStrokeWidth(minorWidth);
@@ -1340,28 +1340,28 @@ public class MontrealBenchMapView extends View {
             if (majorGrid != null) {
                 if (activeStyle == MapRenderStyle.DOUBLE_CASING && sc > 180000f) {
                     // Double casing: Pass 1 outer casing
-                    float casingWidth = (sc > 600000f) ? (4.2f * density) : ((sc > 240000f) ? (3.2f * density) : (2.4f * density));
+                    float casingWidth = (sc > 3000000f) ? (6.4f * density) : ((sc > 600000f) ? (4.2f * density) : ((sc > 240000f) ? (3.2f * density) : (2.4f * density)));
                     paintStreetMajor.setStrokeWidth(casingWidth);
                     majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
 
                     // Pass 2 inner core (matching land fill)
-                    float coreWidth = (sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.6f * density) : (1.1f * density));
+                    float coreWidth = (sc > 3000000f) ? (3.6f * density) : ((sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.6f * density) : (1.1f * density)));
                     paintStreetCasingCore.setStrokeWidth(coreWidth);
                     majorGrid.drawVisible(canvas, lineBuffer, paintStreetCasingCore, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
                 } else {
                     float majorWidth;
                     switch (activeStyle) {
                         case THIN_ARCHITECTURAL:
-                            majorWidth = (sc > 600000f) ? (1.3f * density) : ((sc > 240000f) ? (0.9f * density) : (0.65f * density));
+                            majorWidth = (sc > 3000000f) ? (2.0f * density) : ((sc > 600000f) ? (1.3f * density) : ((sc > 240000f) ? (0.9f * density) : (0.65f * density)));
                             break;
                         case BOLD_BAUHAUS:
-                            majorWidth = (sc > 600000f) ? (3.8f * density) : ((sc > 240000f) ? (2.8f * density) : (2.0f * density));
+                            majorWidth = (sc > 3000000f) ? (5.5f * density) : ((sc > 600000f) ? (3.8f * density) : ((sc > 240000f) ? (2.8f * density) : (2.0f * density)));
                             break;
                         case DOTTED_MATRIX:
-                            majorWidth = (sc > 600000f) ? (2.6f * density) : ((sc > 240000f) ? (1.9f * density) : (1.4f * density));
+                            majorWidth = (sc > 3000000f) ? (3.8f * density) : ((sc > 600000f) ? (2.6f * density) : ((sc > 240000f) ? (1.9f * density) : (1.4f * density)));
                             break;
                         default:
-                            majorWidth = (sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.5f * density) : (1.1f * density));
+                            majorWidth = (sc > 3000000f) ? (3.4f * density) : ((sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.5f * density) : (1.1f * density)));
                             break;
                     }
                     paintStreetMajor.setStrokeWidth(majorWidth);
@@ -1387,9 +1387,13 @@ public class MontrealBenchMapView extends View {
                 step = 1;
                 benchRadius = 3.4f * density;
                 drawHalo = true;
-            } else {
+            } else if (sc < 6000000f) {
                 step = 1;
                 benchRadius = 4.8f * density;
+                drawHalo = true;
+            } else {
+                step = 1;
+                benchRadius = 6.0f * density;
                 drawHalo = true;
             }
 
@@ -1800,6 +1804,15 @@ public class MontrealBenchMapView extends View {
 
     public void setMapRotation(float rotationDegrees) {
         this.mapRotationDegrees = (rotationDegrees % 360f + 360f) % 360f;
+        invalidate();
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
+    public void setScale(float newScale) {
+        this.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
         invalidate();
     }
 
