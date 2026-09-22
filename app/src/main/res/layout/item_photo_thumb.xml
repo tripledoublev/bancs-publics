@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="72dp"
+    android:layout_height="72dp"
+    android:layout_marginEnd="10dp">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/chip_bg">
+
+        <ImageView
+            android:id="@+id/iv_thumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="?attr/selectableItemBackground" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Delete badge -->
+    <ImageView
+        android:id="@+id/btn_delete_thumb"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="2dp"
+        android:background="@drawable/bg_circle_button"
+        android:padding="4dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:contentDescription="Supprimer la photo"
+        app:tint="#FFFFFF" />
+</FrameLayout>

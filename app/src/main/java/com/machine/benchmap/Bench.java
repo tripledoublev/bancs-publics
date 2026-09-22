@@ -106,6 +106,14 @@ public class Bench {
         return "Non spécifié";
     }
 
+    public String getId() {
+        return toBenchId(lat, lon);
+    }
+
+    public static String toBenchId(double lat, double lon) {
+        return String.format(java.util.Locale.US, "%.6f,%.6f", lat, lon);
+    }
+
     public static double toMercatorX(double lon) {
         return Math.toRadians(lon);
     }

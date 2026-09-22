@@ -56,6 +56,16 @@ import android.widget.ListView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.FileProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import android.graphics.Bitmap;
+import android.widget.CheckBox;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -77,7 +87,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
     // Header Swiss elements
     private MaterialCardView cardHeader;
-    private TextView tvAppTitle;
+    private View layoutCounterBadge;
+    private ImageView btnCollections;
     private ImageView btnThemeToggle;
     private ImageView btnMeetup;
     private boolean isDarkMode = false;
@@ -107,7 +118,25 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private TextView tvBenchName, tvBenchType, tvBenchDistance, tvBenchCoords;
     private TextView tagMaterial, tagBackrest, tagSeats;
     private ImageView btnCloseDetail, btnCardRandom;
+    private ImageView btnCardFavorite;
+    private LinearLayout layoutDetailSavedInfo;
+    private TextView tvDetailCollectionsBadge;
+    private LinearLayout cardDetailNote;
+    private TextView tvDetailNote;
+    private HorizontalScrollView scrollDetailPhotos;
+    private LinearLayout layoutDetailPhotosStrip;
+    private TextView btnDetailAddNotePhoto;
     private MaterialButton btnNavigate, btnShare;
+
+    // Collections & Photos
+    private BenchCollectionManager collectionManager;
+    private Uri pendingCameraUri = null;
+    private File pendingCameraFile = null;
+    private ActivityResultLauncher<Uri> takePictureLauncher;
+    private ActivityResultLauncher<String> pickImageLauncher;
+    private String activePhotoTargetBenchId = null;
+    private List<String> currentWorkingPhotos = null;
+    private Runnable photoAddedCallback = null;
 
     // Hardware Services
     private LocationManager locationManager;
@@ -160,6 +189,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         }
 
+        collectionManager = BenchCollectionManager.getInstance(this);
+        initPhotoLaunchers();
+
         bindViews();
         setupWindowInsets();
         initTheme();
@@ -181,11 +213,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         benchMapView = findViewById(R.id.bench_map_view);
         layoutHeader = findViewById(R.id.layout_header);
         cardHeader = findViewById(R.id.card_header);
-        tvAppTitle = findViewById(R.id.tv_app_title);
+        layoutCounterBadge = findViewById(R.id.layout_counter_badge);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
         btnMeetup = findViewById(R.id.btn_meetup);
+        btnCollections = findViewById(R.id.btn_collections);
 
         cardMeetupBanner = findViewById(R.id.card_meetup_banner);
         tvMeetupBannerTitle = findViewById(R.id.tv_meetup_banner_title);
@@ -208,6 +241,14 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         tagSeats = findViewById(R.id.tag_seats);
         btnCloseDetail = findViewById(R.id.btn_close_detail);
         btnCardRandom = findViewById(R.id.btn_card_random);
+        btnCardFavorite = findViewById(R.id.btn_card_favorite);
+        layoutDetailSavedInfo = findViewById(R.id.layout_detail_saved_info);
+        tvDetailCollectionsBadge = findViewById(R.id.tv_detail_collections_badge);
+        cardDetailNote = findViewById(R.id.card_detail_note);
+        tvDetailNote = findViewById(R.id.tv_detail_note);
+        scrollDetailPhotos = findViewById(R.id.scroll_detail_photos);
+        layoutDetailPhotosStrip = findViewById(R.id.layout_detail_photos_strip);
+        btnDetailAddNotePhoto = findViewById(R.id.btn_detail_add_note_photo);
         btnNavigate = findViewById(R.id.btn_navigate);
         btnShare = findViewById(R.id.btn_share);
     }
@@ -264,16 +305,15 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             cardHeader.setCardBackgroundColor(bgCard);
             cardHeader.setStrokeColor(borderCard);
         }
-        if (tvAppTitle != null) {
-            tvAppTitle.setTextColor(textPrimary);
-        }
-        if (tvBenchCounter != null) {
+        if (layoutCounterBadge != null) {
             GradientDrawable counterDrawable = new GradientDrawable();
             counterDrawable.setShape(GradientDrawable.RECTANGLE);
             counterDrawable.setCornerRadius(12f * d);
             counterDrawable.setColor(chipBg);
             counterDrawable.setStroke((int) (1f * d), borderCard);
-            tvBenchCounter.setBackground(counterDrawable);
+            layoutCounterBadge.setBackground(counterDrawable);
+        }
+        if (tvBenchCounter != null) {
             tvBenchCounter.setTextColor(textPrimary);
         }
         if (btnThemeToggle != null) {
@@ -282,6 +322,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (btnMeetup != null) {
             btnMeetup.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#60A5FA") : Color.parseColor("#2563EB")));
+        }
+        if (btnCollections != null) {
+            btnCollections.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318")));
         }
 
         // Rendez-vous Banner Styling
@@ -353,6 +396,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             btnCardRandom.setImageTintList(ColorStateList.valueOf(textMuted));
         }
 
+        GradientDrawable circleBtnFav = new GradientDrawable();
+        circleBtnFav.setShape(GradientDrawable.OVAL);
+        circleBtnFav.setColor(chipBg);
+        if (btnCardFavorite != null) {
+            btnCardFavorite.setBackground(circleBtnFav);
+        }
+
         // Attribute Chips
         GradientDrawable d1 = new GradientDrawable();
         d1.setShape(GradientDrawable.RECTANGLE);
@@ -411,6 +461,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 controller.setAppearanceLightNavigationBars(!darkMode);
             }
         } catch (Exception ignored) {}
+
+        if (currentlySelectedBench != null) {
+            updateDetailCardSavedState(currentlySelectedBench);
+        }
     }
 
     private void setupActions() {
@@ -438,6 +492,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             triggerHapticTick();
             showSearchDialog();
         });
+
+        if (btnCollections != null) {
+            btnCollections.setOnClickListener(v -> {
+                triggerHapticTick();
+                showCollectionsDialog();
+            });
+        }
 
         btnNearest.setOnClickListener(v -> {
             triggerHapticTick();
@@ -467,6 +528,33 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 Toast.makeText(this, "Chargement des bancs...", Toast.LENGTH_SHORT).show();
             }
         });
+
+        if (btnCardFavorite != null) {
+            btnCardFavorite.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (currentlySelectedBench != null) {
+                    showSaveBenchDialog(currentlySelectedBench);
+                }
+            });
+        }
+
+        if (btnDetailAddNotePhoto != null) {
+            btnDetailAddNotePhoto.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (currentlySelectedBench != null) {
+                    showSaveBenchDialog(currentlySelectedBench);
+                }
+            });
+        }
+
+        if (cardDetailNote != null) {
+            cardDetailNote.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (currentlySelectedBench != null) {
+                    showSaveBenchDialog(currentlySelectedBench);
+                }
+            });
+        }
 
         tvBenchCoords.setOnClickListener(v -> {
             if (currentlySelectedBench != null) {
@@ -565,6 +653,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             } else {
                 tagSeats.setText("Places: 2–3 (standard)");
             }
+
+            updateDetailCardSavedState(bench);
 
             cardDetail.setVisibility(View.VISIBLE);
             if (layoutBottomControls != null) {
@@ -683,11 +773,14 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         TextView tvKeyError = view.findViewById(R.id.tv_key_error);
         MaterialButton btnCalculateMeetup = view.findViewById(R.id.btn_calculate_meetup);
 
-        final double baseLat = (currentlySelectedBench != null) ? currentlySelectedBench.lat :
-                ((lastLocation != null) ? lastLocation.getLatitude() : MontrealBenchMapView.CENTER_LAT);
-        final double baseLon = (currentlySelectedBench != null) ? currentlySelectedBench.lon :
-                ((lastLocation != null) ? lastLocation.getLongitude() : MontrealBenchMapView.CENTER_LON);
-        final String baseName = (currentlySelectedBench != null) ? currentlySelectedBench.getDisplayName() : "Montréal";
+        Location bestDeviceLoc = getBestDeviceLocation();
+        if (bestDeviceLoc == null) {
+            Toast.makeText(this, "Acquisition de votre position GPS...", Toast.LENGTH_SHORT).show();
+            startLocationUpdates();
+        }
+        final double baseLat = (bestDeviceLoc != null) ? bestDeviceLoc.getLatitude() : MontrealBenchMapView.CENTER_LAT;
+        final double baseLon = (bestDeviceLoc != null) ? bestDeviceLoc.getLongitude() : MontrealBenchMapView.CENTER_LON;
+        final String baseName = (bestDeviceLoc != null) ? "Ma position" : "Montréal";
 
         // Dynamic theme styling for dialog
         int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
@@ -1136,6 +1229,827 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 vibrator.vibrate(18);
             }
         }
+    }
+
+    private Location getBestDeviceLocation() {
+        if (lastLocation != null) {
+            return lastLocation;
+        }
+        try {
+            if (locationManager != null && (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+                Location gps = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                Location net = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (gps != null && net != null) {
+                    return (net.getTime() > gps.getTime()) ? net : gps;
+                }
+                if (gps != null) return gps;
+                if (net != null) return net;
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void initPhotoLaunchers() {
+        takePictureLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+            if (Boolean.TRUE.equals(success) && pendingCameraUri != null && activePhotoTargetBenchId != null) {
+                String savedPath = collectionManager.importPhotoFromUri(pendingCameraUri, activePhotoTargetBenchId);
+                if (savedPath != null && currentWorkingPhotos != null) {
+                    currentWorkingPhotos.add(savedPath);
+                    if (photoAddedCallback != null) {
+                        photoAddedCallback.run();
+                    }
+                }
+            }
+        });
+
+        pickImageLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null && activePhotoTargetBenchId != null) {
+                String savedPath = collectionManager.importPhotoFromUri(uri, activePhotoTargetBenchId);
+                if (savedPath != null && currentWorkingPhotos != null) {
+                    currentWorkingPhotos.add(savedPath);
+                    if (photoAddedCallback != null) {
+                        photoAddedCallback.run();
+                    }
+                }
+            }
+        });
+    }
+
+    private void updateDetailCardSavedState(Bench bench) {
+        if (bench == null) return;
+        String bId = bench.getId();
+        boolean isSaved = collectionManager.isBenchSaved(bId);
+        SavedBench sb = collectionManager.getSavedBench(bId);
+        List<BenchCollection> cols = collectionManager.getCollectionsForBench(bId);
+
+        if (btnCardFavorite != null) {
+            if (isSaved) {
+                btnCardFavorite.setImageResource(R.drawable.ic_bookmark_filled);
+                btnCardFavorite.setColorFilter(Color.parseColor("#E52B35"));
+            } else {
+                btnCardFavorite.setImageResource(R.drawable.ic_bookmark);
+                btnCardFavorite.setColorFilter(isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085"));
+            }
+        }
+
+        if (isSaved && sb != null) {
+            if (btnDetailAddNotePhoto != null) btnDetailAddNotePhoto.setVisibility(View.GONE);
+            if (layoutDetailSavedInfo != null) layoutDetailSavedInfo.setVisibility(View.VISIBLE);
+
+            if (tvDetailCollectionsBadge != null) {
+                if (!cols.isEmpty()) {
+                    StringBuilder sbTitle = new StringBuilder("Dans : ");
+                    for (int i = 0; i < cols.size(); i++) {
+                        if (i > 0) sbTitle.append(" • ");
+                        sbTitle.append(cols.get(i).getDisplayTitle());
+                    }
+                    tvDetailCollectionsBadge.setText(sbTitle.toString());
+                    tvDetailCollectionsBadge.setVisibility(View.VISIBLE);
+                } else {
+                    tvDetailCollectionsBadge.setVisibility(View.GONE);
+                }
+            }
+
+            if (cardDetailNote != null && tvDetailNote != null) {
+                if (sb.hasNote()) {
+                    tvDetailNote.setText(sb.note);
+                    cardDetailNote.setVisibility(View.VISIBLE);
+                } else {
+                    cardDetailNote.setVisibility(View.GONE);
+                }
+            }
+
+            if (scrollDetailPhotos != null && layoutDetailPhotosStrip != null) {
+                if (sb.hasPhotos()) {
+                    layoutDetailPhotosStrip.removeAllViews();
+                    for (String photoPath : sb.photoPaths) {
+                        View thumbView = getLayoutInflater().inflate(R.layout.item_photo_thumb, layoutDetailPhotosStrip, false);
+                        ImageView iv = thumbView.findViewById(R.id.iv_thumb);
+                        View btnDel = thumbView.findViewById(R.id.btn_delete_thumb);
+                        btnDel.setVisibility(View.GONE);
+
+                        Bitmap bmp = BenchCollectionManager.loadThumbnail(this, photoPath, 140);
+                        if (bmp != null) {
+                            iv.setImageBitmap(bmp);
+                        }
+                        thumbView.setOnClickListener(v -> showPhotoViewerDialog(photoPath));
+                        layoutDetailPhotosStrip.addView(thumbView);
+                    }
+                    scrollDetailPhotos.setVisibility(View.VISIBLE);
+                } else {
+                    scrollDetailPhotos.setVisibility(View.GONE);
+                }
+            }
+        } else {
+            if (layoutDetailSavedInfo != null) layoutDetailSavedInfo.setVisibility(View.GONE);
+            if (btnDetailAddNotePhoto != null) btnDetailAddNotePhoto.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void showCollectionsDialog() {
+        final BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_collections, null);
+        dialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+
+        View root = view.findViewById(R.id.dialog_collections_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(24 * d));
+            return insets;
+        });
+
+        View layoutViewCollections = view.findViewById(R.id.layout_view_collections);
+        View layoutViewSingleCollection = view.findViewById(R.id.layout_view_single_collection);
+        TextView tvCollectionsTitle = view.findViewById(R.id.tv_collections_title);
+        TextView tvCollectionsSubtitle = view.findViewById(R.id.tv_collections_subtitle);
+        MaterialButton btnNewCollection = view.findViewById(R.id.btn_new_collection);
+        ImageView btnCollectionsClose = view.findViewById(R.id.btn_collections_close);
+        RecyclerView rvCollections = view.findViewById(R.id.rv_collections);
+        View layoutEmptyCollections = view.findViewById(R.id.layout_empty_collections);
+
+        ImageView btnBackToCollections = view.findViewById(R.id.btn_back_to_collections);
+        TextView tvDetailColTitle = view.findViewById(R.id.tv_detail_col_title);
+        TextView tvDetailColSubtitle = view.findViewById(R.id.tv_detail_col_subtitle);
+        ImageView btnDeleteCollection = view.findViewById(R.id.btn_delete_collection);
+        ImageView btnSingleColClose = view.findViewById(R.id.btn_single_col_close);
+        RecyclerView rvCollectionBenches = view.findViewById(R.id.rv_collection_benches);
+        View layoutEmptySingleCollection = view.findViewById(R.id.layout_empty_single_collection);
+
+        if (tvCollectionsTitle != null) tvCollectionsTitle.setTextColor(textPri);
+        if (tvCollectionsSubtitle != null) tvCollectionsSubtitle.setTextColor(textSec);
+        if (tvDetailColTitle != null) tvDetailColTitle.setTextColor(textPri);
+        if (tvDetailColSubtitle != null) tvDetailColSubtitle.setTextColor(textSec);
+        if (btnCollectionsClose != null) btnCollectionsClose.setColorFilter(textSec);
+        if (btnSingleColClose != null) btnSingleColClose.setColorFilter(textSec);
+        if (btnBackToCollections != null) btnBackToCollections.setColorFilter(textPri);
+
+        dialog.setOnShowListener(d -> {
+            View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setNavigationBarColor(bgDialog);
+            }
+        });
+
+        if (btnCollectionsClose != null) btnCollectionsClose.setOnClickListener(v -> dialog.dismiss());
+        if (btnSingleColClose != null) btnSingleColClose.setOnClickListener(v -> dialog.dismiss());
+
+        class CollectionsViewController {
+            void showAll() {
+                layoutViewCollections.setVisibility(View.VISIBLE);
+                layoutViewSingleCollection.setVisibility(View.GONE);
+
+                List<BenchCollection> cols = collectionManager.getCollections();
+                int totalSaved = collectionManager.getTotalSavedBenchesCount();
+                tvCollectionsSubtitle.setText(String.format(Locale.CANADA_FRENCH, "%d bancs enregistrés sur cet appareil", totalSaved));
+
+                if (cols.isEmpty() || (cols.size() == 1 && cols.get(0).size() == 0)) {
+                    if (layoutEmptyCollections != null) layoutEmptyCollections.setVisibility(View.VISIBLE);
+                } else {
+                    if (layoutEmptyCollections != null) layoutEmptyCollections.setVisibility(View.GONE);
+                }
+
+                rvCollections.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                rvCollections.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                    @NonNull
+                    @Override
+                    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                        View itemView = getLayoutInflater().inflate(R.layout.item_collection, parent, false);
+                        return new RecyclerView.ViewHolder(itemView) {};
+                    }
+
+                    @Override
+                    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                        BenchCollection col = cols.get(position);
+                        TextView tvEmoji = holder.itemView.findViewById(R.id.tv_collection_emoji);
+                        TextView tvTitle = holder.itemView.findViewById(R.id.tv_collection_title);
+                        TextView tvCount = holder.itemView.findViewById(R.id.tv_collection_count);
+                        ImageView ivChevron = holder.itemView.findViewById(R.id.iv_collection_chevron);
+
+                        tvEmoji.setText(col.emoji);
+                        tvTitle.setText(col.name);
+                        tvTitle.setTextColor(textPri);
+
+                        String countText = col.size() + (col.size() > 1 ? " bancs" : " banc");
+                        if (!col.description.isEmpty()) {
+                            countText += " • " + col.description;
+                        }
+                        tvCount.setText(countText);
+                        tvCount.setTextColor(textSec);
+                        ivChevron.setColorFilter(textSec);
+
+                        holder.itemView.setOnClickListener(v -> {
+                            triggerHapticTick();
+                            showSingle(col);
+                        });
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return cols.size();
+                    }
+                });
+            }
+
+            void showSingle(BenchCollection col) {
+                layoutViewCollections.setVisibility(View.GONE);
+                layoutViewSingleCollection.setVisibility(View.VISIBLE);
+
+                tvDetailColTitle.setText(col.getDisplayTitle());
+                String countText = col.size() + (col.size() > 1 ? " bancs enregistrés" : " banc enregistré");
+                tvDetailColSubtitle.setText(countText);
+
+                if (!col.id.equals(BenchCollection.DEFAULT_ID)) {
+                    btnDeleteCollection.setVisibility(View.VISIBLE);
+                    btnDeleteCollection.setOnClickListener(v -> {
+                        triggerHapticTick();
+                        collectionManager.deleteCollection(col.id);
+                        Toast.makeText(MainActivity.this, "Liste supprimée", Toast.LENGTH_SHORT).show();
+                        showAll();
+                    });
+                } else {
+                    btnDeleteCollection.setVisibility(View.GONE);
+                }
+
+                btnBackToCollections.setOnClickListener(v -> {
+                    triggerHapticTick();
+                    showAll();
+                });
+
+                List<SavedBench> benches = collectionManager.getBenchesInCollection(col.id);
+                if (benches.isEmpty()) {
+                    layoutEmptySingleCollection.setVisibility(View.VISIBLE);
+                    rvCollectionBenches.setVisibility(View.GONE);
+                } else {
+                    layoutEmptySingleCollection.setVisibility(View.GONE);
+                    rvCollectionBenches.setVisibility(View.VISIBLE);
+
+                    Location userLoc = getBestDeviceLocation();
+
+                    rvCollectionBenches.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                    rvCollectionBenches.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                        @NonNull
+                        @Override
+                        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                            View itemView = getLayoutInflater().inflate(R.layout.item_collection_bench, parent, false);
+                            return new RecyclerView.ViewHolder(itemView) {};
+                        }
+
+                        @Override
+                        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                            SavedBench sb = benches.get(position);
+                            ImageView ivThumb = holder.itemView.findViewById(R.id.iv_bench_thumb);
+                            TextView tvTitle = holder.itemView.findViewById(R.id.tv_bench_title);
+                            TextView tvSub = holder.itemView.findViewById(R.id.tv_bench_sub);
+                            TextView tvNote = holder.itemView.findViewById(R.id.tv_bench_note_preview);
+                            TextView tvDist = holder.itemView.findViewById(R.id.tv_bench_dist);
+
+                            tvTitle.setText(sb.name);
+                            tvTitle.setTextColor(textPri);
+                            tvSub.setText(sb.subtitle);
+                            tvSub.setTextColor(textSec);
+
+                            if (sb.hasPhotos()) {
+                                Bitmap bmp = BenchCollectionManager.loadThumbnail(MainActivity.this, sb.getPrimaryPhoto(), 120);
+                                if (bmp != null) {
+                                    ivThumb.setPadding(0, 0, 0, 0);
+                                    ivThumb.setColorFilter(null);
+                                    ivThumb.setImageBitmap(bmp);
+                                } else {
+                                    ivThumb.setPadding(30, 30, 30, 30);
+                                    ivThumb.setImageResource(R.drawable.ic_bookmark_filled);
+                                    ivThumb.setColorFilter(Color.parseColor("#E52B35"));
+                                }
+                            } else {
+                                ivThumb.setPadding(30, 30, 30, 30);
+                                ivThumb.setImageResource(R.drawable.ic_bookmark_filled);
+                                ivThumb.setColorFilter(Color.parseColor("#E52B35"));
+                            }
+
+                            if (sb.hasNote()) {
+                                tvNote.setText("« " + sb.note + " »");
+                                tvNote.setVisibility(View.VISIBLE);
+                            } else {
+                                tvNote.setVisibility(View.GONE);
+                            }
+
+                            if (userLoc != null) {
+                                double dMeters = MontrealBenchMapView.computeDistance(userLoc.getLatitude(), userLoc.getLongitude(), sb.lat, sb.lon);
+                                if (dMeters < 1000) {
+                                    tvDist.setText(String.format(Locale.CANADA_FRENCH, "%.0f m", dMeters));
+                                } else {
+                                    tvDist.setText(String.format(Locale.CANADA_FRENCH, "%.1f km", dMeters / 1000.0));
+                                }
+                                tvDist.setVisibility(View.VISIBLE);
+                            } else {
+                                tvDist.setVisibility(View.GONE);
+                            }
+
+                            holder.itemView.setOnClickListener(v -> {
+                                triggerHapticTick();
+                                dialog.dismiss();
+                                Bench match = benchMapView.findBenchById(sb.benchId);
+                                if (match != null) {
+                                    benchMapView.focusBench(match);
+                                } else {
+                                    Bench fallback = new Bench(sb.lat, sb.lon, sb.park, sb.street, sb.borough, 0, "", -1, 0);
+                                    benchMapView.focusBench(fallback);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public int getItemCount() {
+                            return benches.size();
+                        }
+                    });
+                }
+            }
+        }
+
+        CollectionsViewController controller = new CollectionsViewController();
+        btnNewCollection.setOnClickListener(v -> {
+            triggerHapticTick();
+            showNewCollectionDialog(controller::showAll);
+        });
+
+        controller.showAll();
+        dialog.show();
+    }
+
+    private void showSaveBenchDialog(Bench bench) {
+        if (bench == null) return;
+        final String bId = bench.getId();
+        final SavedBench existing = collectionManager.getSavedBench(bId);
+        final List<BenchCollection> allCols = collectionManager.getCollections();
+        final List<BenchCollection> benchCols = collectionManager.getCollectionsForBench(bId);
+
+        final List<String> selectedColIds = new ArrayList<>();
+        if (existing != null) {
+            for (BenchCollection c : benchCols) {
+                selectedColIds.add(c.id);
+            }
+        } else {
+            selectedColIds.add(BenchCollection.DEFAULT_ID);
+        }
+
+        final List<String> workingPhotos = (existing != null) ? new ArrayList<>(existing.photoPaths) : new ArrayList<>();
+        this.currentWorkingPhotos = workingPhotos;
+        this.activePhotoTargetBenchId = bId;
+
+        final BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_save_bench, null);
+        dialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+
+        View root = view.findViewById(R.id.dialog_save_bench_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(28 * d));
+            return insets;
+        });
+
+        TextView tvSaveTitle = view.findViewById(R.id.tv_save_title);
+        TextView tvSaveBenchName = view.findViewById(R.id.tv_save_bench_name);
+        ImageView btnSaveDialogClose = view.findViewById(R.id.btn_save_dialog_close);
+        LinearLayout layoutCollectionsCheckboxes = view.findViewById(R.id.layout_collections_checkboxes);
+        TextView btnInlineNewCollection = view.findViewById(R.id.btn_inline_new_collection);
+        EditText etBenchNote = view.findViewById(R.id.et_bench_note);
+        LinearLayout layoutPhotosStrip = view.findViewById(R.id.layout_photos_strip);
+        View btnAddPhoto = view.findViewById(R.id.btn_add_photo);
+        MaterialButton btnSaveBenchConfirm = view.findViewById(R.id.btn_save_bench_confirm);
+        MaterialButton btnRemoveSavedBench = view.findViewById(R.id.btn_remove_saved_bench);
+
+        if (tvSaveTitle != null) tvSaveTitle.setTextColor(textPri);
+        if (tvSaveBenchName != null) {
+            tvSaveBenchName.setText(bench.getDisplayName() + " • " + bench.getDisplaySubtitle());
+            tvSaveBenchName.setTextColor(textSec);
+        }
+        if (btnSaveDialogClose != null) {
+            btnSaveDialogClose.setColorFilter(textSec);
+            btnSaveDialogClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        if (etBenchNote != null) {
+            if (existing != null && existing.hasNote()) {
+                etBenchNote.setText(existing.note);
+            }
+            GradientDrawable etBg = new GradientDrawable();
+            etBg.setColor(boxBg);
+            etBg.setCornerRadius(20);
+            etBg.setStroke(2, borderC);
+            etBenchNote.setBackground(etBg);
+            etBenchNote.setTextColor(textPri);
+            etBenchNote.setHintTextColor(textSec);
+        }
+
+        dialog.setOnShowListener(d -> {
+            View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setNavigationBarColor(bgDialog);
+            }
+        });
+
+        Runnable refreshCheckboxes = () -> {
+            layoutCollectionsCheckboxes.removeAllViews();
+            List<BenchCollection> cols = collectionManager.getCollections();
+            for (BenchCollection col : cols) {
+                LinearLayout row = new LinearLayout(MainActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setPadding(0, 8, 0, 8);
+
+                CheckBox cb = new CheckBox(MainActivity.this);
+                cb.setChecked(selectedColIds.contains(col.id));
+                cb.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#E52B35")));
+
+                TextView tvTitle = new TextView(MainActivity.this);
+                tvTitle.setText(col.getDisplayTitle());
+                tvTitle.setTextColor(textPri);
+                tvTitle.setTextSize(14);
+                tvTitle.setTypeface(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD);
+                tvTitle.setPadding(8, 0, 0, 0);
+
+                TextView tvCount = new TextView(MainActivity.this);
+                tvCount.setText(" (" + col.size() + ")");
+                tvCount.setTextColor(textSec);
+                tvCount.setTextSize(12);
+
+                row.addView(cb);
+                row.addView(tvTitle);
+                row.addView(tvCount);
+
+                View.OnClickListener toggle = v -> {
+                    cb.setChecked(!cb.isChecked());
+                    if (cb.isChecked()) {
+                        if (!selectedColIds.contains(col.id)) selectedColIds.add(col.id);
+                    } else {
+                        selectedColIds.remove(col.id);
+                    }
+                };
+                cb.setOnCheckedChangeListener((btn, checked) -> {
+                    if (checked) {
+                        if (!selectedColIds.contains(col.id)) selectedColIds.add(col.id);
+                    } else {
+                        selectedColIds.remove(col.id);
+                    }
+                });
+                tvTitle.setOnClickListener(toggle);
+                layoutCollectionsCheckboxes.addView(row);
+            }
+        };
+        refreshCheckboxes.run();
+
+        btnInlineNewCollection.setOnClickListener(v -> {
+            triggerHapticTick();
+            showNewCollectionDialog(() -> {
+                List<BenchCollection> updatedList = collectionManager.getCollections();
+                if (!updatedList.isEmpty()) {
+                    BenchCollection newest = updatedList.get(updatedList.size() - 1);
+                    selectedColIds.add(newest.id);
+                }
+                refreshCheckboxes.run();
+            });
+        });
+
+        Runnable refreshPhotos = new Runnable() {
+            @Override
+            public void run() {
+                for (int i = layoutPhotosStrip.getChildCount() - 1; i >= 0; i--) {
+                    View child = layoutPhotosStrip.getChildAt(i);
+                    if (child != btnAddPhoto) {
+                        layoutPhotosStrip.removeViewAt(i);
+                    }
+                }
+                for (String photoPath : workingPhotos) {
+                    View thumbView = getLayoutInflater().inflate(R.layout.item_photo_thumb, layoutPhotosStrip, false);
+                    ImageView iv = thumbView.findViewById(R.id.iv_thumb);
+                    View btnDel = thumbView.findViewById(R.id.btn_delete_thumb);
+
+                    Bitmap bmp = BenchCollectionManager.loadThumbnail(MainActivity.this, photoPath, 140);
+                    if (bmp != null) {
+                        iv.setImageBitmap(bmp);
+                    }
+                    iv.setOnClickListener(v -> showPhotoViewerDialog(photoPath));
+                    btnDel.setOnClickListener(v -> {
+                        triggerHapticTick();
+                        workingPhotos.remove(photoPath);
+                        run();
+                    });
+                    layoutPhotosStrip.addView(thumbView);
+                }
+            }
+        };
+        refreshPhotos.run();
+        this.photoAddedCallback = refreshPhotos;
+
+        btnAddPhoto.setOnClickListener(v -> {
+            triggerHapticTick();
+            showPhotoSourcePicker();
+        });
+
+        if (existing != null || collectionManager.isBenchSaved(bId)) {
+            btnRemoveSavedBench.setVisibility(View.VISIBLE);
+            btnRemoveSavedBench.setOnClickListener(v -> {
+                triggerHapticTick();
+                collectionManager.removeBenchCompletely(bId);
+                dialog.dismiss();
+                updateDetailCardSavedState(bench);
+                Toast.makeText(MainActivity.this, "Banc retiré de vos favoris", Toast.LENGTH_SHORT).show();
+            });
+        } else {
+            btnRemoveSavedBench.setVisibility(View.GONE);
+        }
+
+        btnSaveBenchConfirm.setOnClickListener(v -> {
+            triggerHapticTick();
+            String noteText = etBenchNote.getText().toString().trim();
+            SavedBench updated = new SavedBench(
+                    bId, bench.lat, bench.lon, bench.getDisplayName(), bench.getDisplaySubtitle(),
+                    bench.park, bench.street, bench.borough,
+                    noteText, workingPhotos,
+                    (existing != null) ? existing.addedAt : System.currentTimeMillis(),
+                    System.currentTimeMillis()
+            );
+            collectionManager.saveBenchWithCollections(updated, selectedColIds);
+            dialog.dismiss();
+            updateDetailCardSavedState(bench);
+            Toast.makeText(MainActivity.this, "Banc enregistré dans vos listes !", Toast.LENGTH_SHORT).show();
+        });
+
+        dialog.show();
+    }
+
+    private void showPhotoSourcePicker() {
+        BottomSheetDialog pickerDialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_photo_source_picker, null);
+        pickerDialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int cardBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F8F9FA");
+        int cardBorder = isDarkMode ? Color.parseColor("#2C303B") : Color.parseColor("#E4E7EC");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+
+        View root = view.findViewById(R.id.dialog_photo_picker_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(28 * d));
+            return insets;
+        });
+
+        TextView tvTitle = view.findViewById(R.id.tv_photo_picker_title);
+        TextView tvSubtitle = view.findViewById(R.id.tv_photo_picker_subtitle);
+        MaterialCardView btnCam = view.findViewById(R.id.btn_photo_camera);
+        MaterialCardView btnGal = view.findViewById(R.id.btn_photo_gallery);
+        TextView tvCameraLabel = view.findViewById(R.id.tv_camera_label);
+        TextView tvGalleryLabel = view.findViewById(R.id.tv_gallery_label);
+        ImageView ivCamChevron = view.findViewById(R.id.iv_camera_chevron);
+        ImageView ivGalChevron = view.findViewById(R.id.iv_gallery_chevron);
+        MaterialButton btnCancel = view.findViewById(R.id.btn_photo_cancel);
+
+        if (tvTitle != null) tvTitle.setTextColor(textPri);
+        if (tvSubtitle != null) tvSubtitle.setTextColor(textSec);
+        if (tvCameraLabel != null) tvCameraLabel.setTextColor(textPri);
+        if (tvGalleryLabel != null) tvGalleryLabel.setTextColor(textPri);
+        if (ivCamChevron != null) ivCamChevron.setColorFilter(textSec);
+        if (ivGalChevron != null) ivGalChevron.setColorFilter(textSec);
+
+        if (btnCam != null) {
+            btnCam.setCardBackgroundColor(cardBg);
+            btnCam.setStrokeColor(cardBorder);
+            btnCam.setOnClickListener(v -> {
+                triggerHapticTick();
+                pickerDialog.dismiss();
+                launchCameraCapture();
+            });
+        }
+
+        if (btnGal != null) {
+            btnGal.setCardBackgroundColor(cardBg);
+            btnGal.setStrokeColor(cardBorder);
+            btnGal.setOnClickListener(v -> {
+                triggerHapticTick();
+                pickerDialog.dismiss();
+                pickImageLauncher.launch("image/*");
+            });
+        }
+
+        if (btnCancel != null) {
+            btnCancel.setTextColor(textSec);
+            btnCancel.setOnClickListener(v -> {
+                triggerHapticTick();
+                pickerDialog.dismiss();
+            });
+        }
+
+        pickerDialog.setOnShowListener(d -> {
+            View bs = pickerDialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+            if (pickerDialog.getWindow() != null) {
+                pickerDialog.getWindow().setNavigationBarColor(bgDialog);
+            }
+        });
+        pickerDialog.show();
+    }
+
+    private void launchCameraCapture() {
+        try {
+            File cacheDir = new File(getCacheDir(), "camera");
+            cacheDir.mkdirs();
+            pendingCameraFile = File.createTempFile("photo_", ".jpg", cacheDir);
+            pendingCameraUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", pendingCameraFile);
+            takePictureLauncher.launch(pendingCameraUri);
+        } catch (Exception e) {
+            Toast.makeText(this, "Impossible d'ouvrir l'appareil photo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showNewCollectionDialog(Runnable onCreated) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_new_collection, null);
+        dialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+
+        View root = view.findViewById(R.id.dialog_new_col_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        LinearLayout layoutEmojiPicker = view.findViewById(R.id.layout_emoji_picker);
+        EditText etColName = view.findViewById(R.id.et_col_name);
+        EditText etColDesc = view.findViewById(R.id.et_col_desc);
+        MaterialButton btnConfirm = view.findViewById(R.id.btn_create_col_confirm);
+
+        final String[] emojis = new String[]{"❤️", "⭐", "☕", "🌳", "📖", "🌅", "🥖", "🥪", "🎨", "🐾", "🍁", "🚴", "☀️", "🏙️", "🛋️"};
+        final String[] selectedEmoji = new String[]{emojis[0]};
+
+        final List<TextView> emojiViews = new ArrayList<>();
+        for (String em : emojis) {
+            TextView tv = new TextView(this);
+            tv.setText(em);
+            tv.setTextSize(22);
+            tv.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (48 * getResources().getDisplayMetrics().density), (int) (48 * getResources().getDisplayMetrics().density));
+            lp.setMargins(0, 0, (int) (8 * getResources().getDisplayMetrics().density), 0);
+            tv.setLayoutParams(lp);
+
+            GradientDrawable gdEm = new GradientDrawable();
+            gdEm.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+            if (em.equals(selectedEmoji[0])) {
+                gdEm.setColor(Color.parseColor("#E52B35"));
+            } else {
+                gdEm.setColor(boxBg);
+            }
+            tv.setBackground(gdEm);
+            tv.setOnClickListener(v -> {
+                selectedEmoji[0] = em;
+                for (int i = 0; i < emojiViews.size(); i++) {
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+                    if (emojis[i].equals(selectedEmoji[0])) {
+                        bg.setColor(Color.parseColor("#E52B35"));
+                    } else {
+                        bg.setColor(boxBg);
+                    }
+                    emojiViews.get(i).setBackground(bg);
+                }
+            });
+            emojiViews.add(tv);
+            layoutEmojiPicker.addView(tv);
+        }
+
+        if (etColName != null) {
+            GradientDrawable etBg = new GradientDrawable();
+            etBg.setColor(boxBg);
+            etBg.setCornerRadius(20);
+            etBg.setStroke(2, borderC);
+            etColName.setBackground(etBg);
+            etColName.setTextColor(textPri);
+            etColName.setHintTextColor(textSec);
+        }
+
+        if (etColDesc != null) {
+            GradientDrawable etBg2 = new GradientDrawable();
+            etBg2.setColor(boxBg);
+            etBg2.setCornerRadius(20);
+            etBg2.setStroke(2, borderC);
+            etColDesc.setBackground(etBg2);
+            etColDesc.setTextColor(textPri);
+            etColDesc.setHintTextColor(textSec);
+        }
+
+        dialog.setOnShowListener(d -> {
+            View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                bs.setBackgroundColor(Color.TRANSPARENT);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+        });
+
+        btnConfirm.setOnClickListener(v -> {
+            String name = etColName.getText().toString().trim();
+            if (name.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Veuillez entrer un nom pour la liste", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            String desc = (etColDesc != null) ? etColDesc.getText().toString().trim() : "";
+            collectionManager.createCollection(name, selectedEmoji[0], desc);
+            dialog.dismiss();
+            triggerHapticTick();
+            Toast.makeText(MainActivity.this, "Liste « " + name + " » créée !", Toast.LENGTH_SHORT).show();
+            if (onCreated != null) {
+                onCreated.run();
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void showPhotoViewerDialog(String photoPath) {
+        android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View view = getLayoutInflater().inflate(R.layout.dialog_photo_viewer, null);
+        dialog.setContentView(view);
+
+        ImageView iv = view.findViewById(R.id.iv_fullscreen_photo);
+        View btnClose = view.findViewById(R.id.btn_close_photo);
+
+        Bitmap bmp = BenchCollectionManager.loadThumbnail(this, photoPath, 1600);
+        if (bmp != null) {
+            iv.setImageBitmap(bmp);
+        }
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        iv.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void checkLocationPermission() {

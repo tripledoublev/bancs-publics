@@ -867,6 +867,18 @@ public class MontrealBenchMapView extends View {
         invalidate();
     }
 
+    public Bench findBenchById(String benchId) {
+        if (benchId == null || benchId.isEmpty()) return null;
+        synchronized (dataLock) {
+            for (Bench b : allBenches) {
+                if (b.getId().equals(benchId)) {
+                    return b;
+                }
+            }
+        }
+        return null;
+    }
+
     public void deselectBench() {
         this.selectedBench = null;
         if (mapListener != null) {
