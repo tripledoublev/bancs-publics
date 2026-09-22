@@ -16,14 +16,25 @@ public class Bench {
     public final String material;
     public final int backrest; // 1 = yes, 0 = no, -1 = unspecified
     public final int seats;
+    public final boolean isCustom;
 
     public Bench(double lat, double lon, String park, String street, String borough, int addressNum,
                  String material, int backrest, int seats) {
-        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, borough, addressNum, material, backrest, seats);
+        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, borough, addressNum, material, backrest, seats, false);
     }
 
     public Bench(double lat, double lon, double mercX, double mercY, String park, String street,
                  String borough, int addressNum, String material, int backrest, int seats) {
+        this(lat, lon, mercX, mercY, park, street, borough, addressNum, material, backrest, seats, false);
+    }
+
+    public Bench(double lat, double lon, String park, String street, String borough, int addressNum,
+                 String material, int backrest, int seats, boolean isCustom) {
+        this(lat, lon, toMercatorX(lon), toMercatorY(lat), park, street, borough, addressNum, material, backrest, seats, isCustom);
+    }
+
+    public Bench(double lat, double lon, double mercX, double mercY, String park, String street,
+                 String borough, int addressNum, String material, int backrest, int seats, boolean isCustom) {
         this.lat = lat;
         this.lon = lon;
         this.mercX = mercX;
@@ -35,6 +46,7 @@ public class Bench {
         this.material = material != null ? material : "";
         this.backrest = backrest;
         this.seats = seats;
+        this.isCustom = isCustom;
     }
 
     public boolean isInPark() {
@@ -65,6 +77,16 @@ public class Bench {
     }
 
     public String getDisplayName() {
+        if (isCustom) {
+            if (isInPark()) {
+                return park;
+            }
+            String addr = getAddress();
+            if (!addr.isEmpty()) {
+                return addr;
+            }
+            return "Mon banc";
+        }
         if (isInPark()) {
             return park;
         }
@@ -76,6 +98,10 @@ public class Bench {
     }
 
     public String getDisplaySubtitle() {
+        if (isCustom) {
+            String loc = isInPark() ? park : (!street.isEmpty() ? street : "Ajouté manuellement");
+            return "Mes bancs • " + loc;
+        }
         if (isInPark()) {
             String addr = getAddress();
             if (!addr.isEmpty() && !borough.isEmpty()) {
@@ -107,7 +133,7 @@ public class Bench {
     }
 
     public String getId() {
-        return toBenchId(lat, lon);
+        return isCustom ? "custom_" + toBenchId(lat, lon) : toBenchId(lat, lon);
     }
 
     public static String toBenchId(double lat, double lon) {
@@ -121,5 +147,13 @@ public class Bench {
     public static double toMercatorY(double lat) {
         double rad = Math.toRadians(Math.max(-85.05112878, Math.min(85.05112878, lat)));
         return Math.log(Math.tan(Math.PI / 4.0 + rad / 2.0));
+    }
+
+    public static double toDegreesLon(double mercX) {
+        return Math.toDegrees(mercX);
+    }
+
+    public static double toDegreesLat(double mercY) {
+        return Math.toDegrees(2.0 * Math.atan(Math.exp(mercY)) - Math.PI / 2.0);
     }
 }

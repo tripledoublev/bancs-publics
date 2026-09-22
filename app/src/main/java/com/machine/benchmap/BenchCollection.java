@@ -11,6 +11,7 @@ import java.util.List;
  */
 public class BenchCollection {
     public static final String DEFAULT_ID = "default_favorites";
+    public static final String MES_BANCS_ID = "col_mes_bancs";
 
     public final String id;
     public String name;
@@ -18,6 +19,10 @@ public class BenchCollection {
     public String description;
     public final long createdAt;
     public final List<String> benchIds;
+
+    public boolean isSystemList() {
+        return DEFAULT_ID.equals(id) || MES_BANCS_ID.equals(id);
+    }
 
     public BenchCollection(String id, String name, String emoji, String description) {
         this(id, name, emoji, description, System.currentTimeMillis(), new ArrayList<>());

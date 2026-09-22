@@ -95,7 +95,6 @@ public class BenchCollectionManager {
                 }
             }
 
-            // Load collections
             JSONArray colArr = root.optJSONArray("collections");
             if (colArr != null) {
                 for (int i = 0; i < colArr.length(); i++) {
@@ -108,10 +107,7 @@ public class BenchCollectionManager {
                     }
                 }
             }
-
-            if (collections.isEmpty()) {
-                initDefaults();
-            }
+            ensureDefaultCollections();
         } catch (Exception e) {
             Log.e(TAG, "Error loading collections.json", e);
             initDefaults();
@@ -121,16 +117,45 @@ public class BenchCollectionManager {
     }
 
     private void initDefaults() {
-        if (collections.isEmpty()) {
+        ensureDefaultCollections();
+    }
+
+    private void ensureDefaultCollections() {
+        boolean hasMesBancs = false;
+        boolean hasFavorites = false;
+        for (BenchCollection col : collections) {
+            if (BenchCollection.MES_BANCS_ID.equals(col.id)) hasMesBancs = true;
+            if (BenchCollection.DEFAULT_ID.equals(col.id)) hasFavorites = true;
+        }
+        if (!hasMesBancs) {
+            BenchCollection mesBancsCol = new BenchCollection(
+                    BenchCollection.MES_BANCS_ID,
+                    "Mes bancs",
+                    "◆",
+                    "Bancs ajoutés manuellement"
+            );
+            collections.add(0, mesBancsCol);
+        }
+        if (!hasFavorites) {
             BenchCollection defaultCol = new BenchCollection(
                     BenchCollection.DEFAULT_ID,
                     "Coups de cœur",
                     "❤️",
                     "Mes bancs préférés à Montréal"
             );
-            collections.add(defaultCol);
-            save();
+            int idx = collections.isEmpty() ? 0 : Math.min(1, collections.size());
+            collections.add(idx, defaultCol);
         }
+        // Ensure all custom benches in savedBenches are referenced in Mes bancs
+        BenchCollection mesBancs = getCollection(BenchCollection.MES_BANCS_ID);
+        if (mesBancs != null) {
+            for (SavedBench sb : savedBenches.values()) {
+                if (sb.isCustom && !mesBancs.containsBench(sb.benchId)) {
+                    mesBancs.addBench(sb.benchId);
+                }
+            }
+        }
+        save();
     }
 
     public synchronized void save() {
@@ -188,8 +213,8 @@ public class BenchCollectionManager {
     }
 
     public synchronized boolean deleteCollection(String id) {
-        if (id == null || id.equals(BenchCollection.DEFAULT_ID)) {
-            return false; // Cannot delete default collection
+        if (id == null || id.equals(BenchCollection.DEFAULT_ID) || id.equals(BenchCollection.MES_BANCS_ID)) {
+            return false; // Cannot delete system collections
         }
         for (int i = 0; i < collections.size(); i++) {
             if (collections.get(i).id.equals(id)) {
@@ -199,6 +224,41 @@ public class BenchCollectionManager {
             }
         }
         return false;
+    }
+
+    public synchronized Bench addCustomBench(double lat, double lon, String name, String street,
+                                            String borough, String material, int backrest,
+                                            String note, List<String> photoPaths) {
+        Bench bench = new Bench(lat, lon, name, street, borough, 0, material, backrest, 0, true);
+        String bId = bench.getId();
+        SavedBench sb = new SavedBench(
+                bId, lat, lon, name, bench.getDisplaySubtitle(),
+                name, street, borough, note, photoPaths,
+                System.currentTimeMillis(), System.currentTimeMillis(),
+                true, material, backrest, 0
+        );
+        savedBenches.put(bId, sb);
+
+        BenchCollection mesBancs = getCollection(BenchCollection.MES_BANCS_ID);
+        if (mesBancs != null) {
+            mesBancs.addBench(bId);
+        }
+        save();
+        return bench;
+    }
+
+    public synchronized List<Bench> getAllCustomBenches() {
+        List<Bench> result = new ArrayList<>();
+        for (SavedBench sb : savedBenches.values()) {
+            if (sb.isCustom) {
+                result.add(sb.toBench());
+            }
+        }
+        return result;
+    }
+
+    public synchronized void deleteCustomBench(String benchId) {
+        removeBenchCompletely(benchId);
     }
 
     public synchronized void updateCollection(String id, String name, String emoji, String description) {

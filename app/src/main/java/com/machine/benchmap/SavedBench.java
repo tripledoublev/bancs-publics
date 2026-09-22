@@ -22,6 +22,10 @@ public class SavedBench {
     public final String borough;
     public String note;
     public final List<String> photoPaths; // Relative paths in internal filesDir (e.g. "bench_photos/...")
+    public final boolean isCustom;
+    public final String material;
+    public final int backrest;
+    public final int seats;
     public final long addedAt;
     public long updatedAt;
 
@@ -38,17 +42,28 @@ public class SavedBench {
                 "",
                 new ArrayList<>(),
                 System.currentTimeMillis(),
-                System.currentTimeMillis()
+                System.currentTimeMillis(),
+                bench.isCustom,
+                bench.material,
+                bench.backrest,
+                bench.seats
         );
     }
 
     public SavedBench(String benchId, double lat, double lon, String name, String subtitle,
                       String park, String street, String borough, String note,
                       List<String> photoPaths, long addedAt, long updatedAt) {
+        this(benchId, lat, lon, name, subtitle, park, street, borough, note, photoPaths, addedAt, updatedAt, false, "", -1, 0);
+    }
+
+    public SavedBench(String benchId, double lat, double lon, String name, String subtitle,
+                      String park, String street, String borough, String note,
+                      List<String> photoPaths, long addedAt, long updatedAt,
+                      boolean isCustom, String material, int backrest, int seats) {
         this.benchId = benchId;
         this.lat = lat;
         this.lon = lon;
-        this.name = (name != null && !name.trim().isEmpty()) ? name : "Banc public";
+        this.name = (name != null && !name.trim().isEmpty()) ? name : (isCustom ? "Mon banc" : "Banc public");
         this.subtitle = (subtitle != null) ? subtitle : "";
         this.park = (park != null) ? park : "";
         this.street = (street != null) ? street : "";
@@ -57,6 +72,14 @@ public class SavedBench {
         this.photoPaths = (photoPaths != null) ? new ArrayList<>(photoPaths) : new ArrayList<>();
         this.addedAt = addedAt > 0 ? addedAt : System.currentTimeMillis();
         this.updatedAt = updatedAt > 0 ? updatedAt : this.addedAt;
+        this.isCustom = isCustom;
+        this.material = material != null ? material : "";
+        this.backrest = backrest;
+        this.seats = seats;
+    }
+
+    public Bench toBench() {
+        return new Bench(lat, lon, park, street, borough, 0, material, backrest, seats, isCustom);
     }
 
     public boolean hasNote() {
@@ -113,6 +136,10 @@ public class SavedBench {
             obj.put("photoPaths", photosArr);
             obj.put("addedAt", addedAt);
             obj.put("updatedAt", updatedAt);
+            obj.put("isCustom", isCustom);
+            obj.put("material", material);
+            obj.put("backrest", backrest);
+            obj.put("seats", seats);
             return obj;
         } catch (Exception e) {
             return new JSONObject();
@@ -133,6 +160,10 @@ public class SavedBench {
         String note = obj.optString("note", "");
         long addedAt = obj.optLong("addedAt", System.currentTimeMillis());
         long updatedAt = obj.optLong("updatedAt", addedAt);
+        boolean isCustom = obj.optBoolean("isCustom", benchId.startsWith("custom_"));
+        String material = obj.optString("material", "");
+        int backrest = obj.optInt("backrest", -1);
+        int seats = obj.optInt("seats", 0);
 
         List<String> photos = new ArrayList<>();
         JSONArray photosArr = obj.optJSONArray("photoPaths");
@@ -144,6 +175,6 @@ public class SavedBench {
                 }
             }
         }
-        return new SavedBench(benchId, lat, lon, name, subtitle, park, street, borough, note, photos, addedAt, updatedAt);
+        return new SavedBench(benchId, lat, lon, name, subtitle, park, street, borough, note, photos, addedAt, updatedAt, isCustom, material, backrest, seats);
     }
 }

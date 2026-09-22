@@ -205,6 +205,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         setupActions();
 
         benchMapView.setMapListener(this);
+        benchMapView.setCustomBenches(collectionManager.getAllCustomBenches());
         checkLocationPermission();
         handleIntent(getIntent());
     }
@@ -708,6 +709,14 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             if (layoutBottomControls != null) {
                 layoutBottomControls.setVisibility(View.VISIBLE);
             }
+        });
+    }
+
+    @Override
+    public void onMapLongPressed(double lat, double lon, float screenX, float screenY) {
+        runOnUiThread(() -> {
+            onBenchDeselected();
+            showAddCustomBenchDialog(lat, lon);
         });
     }
 
@@ -1598,7 +1607,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 String countText = col.size() + (col.size() > 1 ? " bancs enregistrés" : " banc enregistré");
                 tvDetailColSubtitle.setText(countText);
 
-                if (!col.id.equals(BenchCollection.DEFAULT_ID)) {
+                if (!col.isSystemList()) {
                     btnDeleteCollection.setVisibility(View.VISIBLE);
                     btnDeleteCollection.setOnClickListener(v -> {
                         triggerHapticTick();
@@ -1659,12 +1668,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                                 } else {
                                     ivThumb.setPadding(30, 30, 30, 30);
                                     ivThumb.setImageResource(R.drawable.ic_bookmark_filled);
-                                    ivThumb.setColorFilter(Color.parseColor("#E52B35"));
+                                    ivThumb.setColorFilter(sb.isCustom ? Color.parseColor("#FF6D00") : Color.parseColor("#E52B35"));
                                 }
                             } else {
                                 ivThumb.setPadding(30, 30, 30, 30);
                                 ivThumb.setImageResource(R.drawable.ic_bookmark_filled);
-                                ivThumb.setColorFilter(Color.parseColor("#E52B35"));
+                                ivThumb.setColorFilter(sb.isCustom ? Color.parseColor("#FF6D00") : Color.parseColor("#E52B35"));
                             }
 
                             if (sb.hasNote()) {
@@ -1693,7 +1702,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                                 if (match != null) {
                                     benchMapView.focusBench(match);
                                 } else {
-                                    Bench fallback = new Bench(sb.lat, sb.lon, sb.park, sb.street, sb.borough, 0, "", -1, 0);
+                                    Bench fallback = sb.toBench();
                                     benchMapView.focusBench(fallback);
                                 }
                             });
@@ -1929,14 +1938,19 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             showPhotoSourcePicker();
         });
 
-        if (existing != null || collectionManager.isBenchSaved(bId)) {
+        if (existing != null || collectionManager.isBenchSaved(bId) || bench.isCustom) {
             btnRemoveSavedBench.setVisibility(View.VISIBLE);
+            btnRemoveSavedBench.setText(bench.isCustom ? "Supprimer ce banc" : "Retirer de tous les favoris");
             btnRemoveSavedBench.setOnClickListener(v -> {
                 triggerHapticTick();
                 collectionManager.removeBenchCompletely(bId);
+                if (bench.isCustom) {
+                    benchMapView.removeCustomBench(bId);
+                    onBenchDeselected();
+                }
                 dialog.dismiss();
                 updateDetailCardSavedState(bench);
-                Toast.makeText(MainActivity.this, "Banc retiré de vos favoris", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, bench.isCustom ? "Banc supprimé" : "Banc retiré de vos favoris", Toast.LENGTH_SHORT).show();
             });
         } else {
             btnRemoveSavedBench.setVisibility(View.GONE);
@@ -1950,12 +1964,260 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                     bench.park, bench.street, bench.borough,
                     noteText, workingPhotos,
                     (existing != null) ? existing.addedAt : System.currentTimeMillis(),
-                    System.currentTimeMillis()
+                    System.currentTimeMillis(),
+                    bench.isCustom, bench.material, bench.backrest, bench.seats
             );
             collectionManager.saveBenchWithCollections(updated, selectedColIds);
             dialog.dismiss();
             updateDetailCardSavedState(bench);
-            Toast.makeText(MainActivity.this, "Banc ajouté à votre liste !", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Banc mis à jour", Toast.LENGTH_SHORT).show();
+        });
+
+        dialog.show();
+    }
+
+    private void showAddCustomBenchDialog(double lat, double lon) {
+        final String provisionalId = "custom_" + Bench.toBenchId(lat, lon);
+        final List<String> customPhotos = new ArrayList<>();
+        this.currentWorkingPhotos = customPhotos;
+        this.activePhotoTargetBenchId = provisionalId;
+
+        final BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_custom_bench, null);
+        dialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+
+        View root = view.findViewById(R.id.dialog_add_custom_bench_root);
+        if (root != null) {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(bgDialog);
+            gd.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(gd);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(28 * d));
+            return insets;
+        });
+
+        TextView tvTitle = view.findViewById(R.id.tv_custom_dialog_title);
+        TextView tvCoords = view.findViewById(R.id.tv_custom_bench_coords);
+        ImageView btnClose = view.findViewById(R.id.btn_custom_dialog_close);
+        EditText etName = view.findViewById(R.id.et_custom_bench_name);
+        EditText etLocation = view.findViewById(R.id.et_custom_bench_location);
+        EditText etNote = view.findViewById(R.id.et_custom_bench_note);
+
+        TextView chipWood = view.findViewById(R.id.chip_mat_wood);
+        TextView chipMetal = view.findViewById(R.id.chip_mat_metal);
+        TextView chipConcrete = view.findViewById(R.id.chip_mat_concrete);
+        TextView chipStone = view.findViewById(R.id.chip_mat_stone);
+        TextView chipOther = view.findViewById(R.id.chip_mat_other);
+
+        TextView chipBackrestYes = view.findViewById(R.id.chip_backrest_yes);
+        TextView chipBackrestNo = view.findViewById(R.id.chip_backrest_no);
+
+        LinearLayout layoutPhotosStrip = view.findViewById(R.id.layout_custom_photos_strip);
+        MaterialCardView btnAddPhoto = view.findViewById(R.id.btn_custom_add_photo);
+        ImageView ivAddPhotoIcon = view.findViewById(R.id.iv_custom_add_photo_icon);
+        TextView tvAddPhotoLabel = view.findViewById(R.id.tv_custom_add_photo_label);
+
+        MaterialButton btnConfirm = view.findViewById(R.id.btn_custom_bench_confirm);
+
+        if (tvTitle != null) tvTitle.setTextColor(textPri);
+        if (tvCoords != null) {
+            tvCoords.setText(String.format(Locale.US, "◆ %.5f° N, %.5f° W", lat, Math.abs(lon)));
+            tvCoords.setTextColor(Color.parseColor("#FF6D00"));
+        }
+        if (btnClose != null) {
+            btnClose.setColorFilter(textSec);
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        float d = getResources().getDisplayMetrics().density;
+        EditText[] editTexts = new EditText[]{etName, etLocation, etNote};
+        for (EditText et : editTexts) {
+            if (et != null) {
+                GradientDrawable etBg = new GradientDrawable();
+                etBg.setColor(boxBg);
+                etBg.setCornerRadius(12f * d);
+                etBg.setStroke((int) (1f * d), borderC);
+                et.setBackground(etBg);
+                et.setTextColor(textPri);
+                et.setHintTextColor(textSec);
+            }
+        }
+
+        final String[] selectedMaterial = new String[]{"Bois"};
+        TextView[] matChips = new TextView[]{chipWood, chipMetal, chipConcrete, chipStone, chipOther};
+        String[] matNames = new String[]{"Bois", "Métal", "Béton", "Pierre", "Autre"};
+
+        Runnable refreshMatChips = () -> {
+            for (int i = 0; i < matChips.length; i++) {
+                TextView c = matChips[i];
+                if (c == null) continue;
+                boolean isSel = matNames[i].equalsIgnoreCase(selectedMaterial[0]);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(10f * d);
+                if (isSel) {
+                    cBg.setColor(Color.parseColor("#FF6D00"));
+                    c.setTextColor(Color.WHITE);
+                } else {
+                    cBg.setColor(boxBg);
+                    cBg.setStroke((int) (1f * d), borderC);
+                    c.setTextColor(textPri);
+                }
+                c.setBackground(cBg);
+            }
+        };
+        for (int i = 0; i < matChips.length; i++) {
+            final int idx = i;
+            if (matChips[i] != null) {
+                matChips[i].setOnClickListener(v -> {
+                    triggerHapticTick();
+                    selectedMaterial[0] = matNames[idx];
+                    refreshMatChips.run();
+                });
+            }
+        }
+        refreshMatChips.run();
+
+        final int[] selectedBackrest = new int[]{1};
+        Runnable refreshBackrestChips = () -> {
+            boolean yes = selectedBackrest[0] == 1;
+            if (chipBackrestYes != null) {
+                GradientDrawable bgYes = new GradientDrawable();
+                bgYes.setCornerRadius(10f * d);
+                if (yes) {
+                    bgYes.setColor(Color.parseColor("#FF6D00"));
+                    chipBackrestYes.setTextColor(Color.WHITE);
+                } else {
+                    bgYes.setColor(boxBg);
+                    bgYes.setStroke((int) (1f * d), borderC);
+                    chipBackrestYes.setTextColor(textPri);
+                }
+                chipBackrestYes.setBackground(bgYes);
+            }
+            if (chipBackrestNo != null) {
+                GradientDrawable bgNo = new GradientDrawable();
+                bgNo.setCornerRadius(10f * d);
+                if (!yes) {
+                    bgNo.setColor(Color.parseColor("#FF6D00"));
+                    chipBackrestNo.setTextColor(Color.WHITE);
+                } else {
+                    bgNo.setColor(boxBg);
+                    bgNo.setStroke((int) (1f * d), borderC);
+                    chipBackrestNo.setTextColor(textPri);
+                }
+                chipBackrestNo.setBackground(bgNo);
+            }
+        };
+        if (chipBackrestYes != null) {
+            chipBackrestYes.setOnClickListener(v -> {
+                triggerHapticTick();
+                selectedBackrest[0] = 1;
+                refreshBackrestChips.run();
+            });
+        }
+        if (chipBackrestNo != null) {
+            chipBackrestNo.setOnClickListener(v -> {
+                triggerHapticTick();
+                selectedBackrest[0] = 0;
+                refreshBackrestChips.run();
+            });
+        }
+        refreshBackrestChips.run();
+
+        if (btnAddPhoto != null) {
+            btnAddPhoto.setCardBackgroundColor(boxBg);
+            btnAddPhoto.setStrokeColor(borderC);
+        }
+        if (ivAddPhotoIcon != null) ivAddPhotoIcon.setColorFilter(textPri);
+        if (tvAddPhotoLabel != null) tvAddPhotoLabel.setTextColor(textPri);
+
+        Runnable refreshPhotos = new Runnable() {
+            @Override
+            public void run() {
+                if (layoutPhotosStrip == null) return;
+                for (int i = layoutPhotosStrip.getChildCount() - 1; i >= 0; i--) {
+                    View child = layoutPhotosStrip.getChildAt(i);
+                    if (child != btnAddPhoto) {
+                        layoutPhotosStrip.removeViewAt(i);
+                    }
+                }
+                for (String photoPath : customPhotos) {
+                    View thumbView = getLayoutInflater().inflate(R.layout.item_photo_thumb, layoutPhotosStrip, false);
+                    MaterialCardView cvThumb = thumbView.findViewById(R.id.cv_thumb);
+                    if (cvThumb != null) {
+                        cvThumb.setCardBackgroundColor(boxBg);
+                        cvThumb.setStrokeColor(borderC);
+                    }
+                    ImageView iv = thumbView.findViewById(R.id.iv_thumb);
+                    View btnDel = thumbView.findViewById(R.id.btn_delete_thumb);
+
+                    Bitmap bmp = BenchCollectionManager.loadThumbnail(MainActivity.this, photoPath, 140);
+                    if (bmp != null) {
+                        iv.setImageBitmap(bmp);
+                    }
+                    iv.setOnClickListener(v -> showPhotoViewerDialog(photoPath));
+                    btnDel.setOnClickListener(v -> {
+                        triggerHapticTick();
+                        customPhotos.remove(photoPath);
+                        run();
+                    });
+                    layoutPhotosStrip.addView(thumbView);
+                }
+            }
+        };
+        this.photoAddedCallback = refreshPhotos;
+
+        if (btnAddPhoto != null) {
+            btnAddPhoto.setOnClickListener(v -> {
+                triggerHapticTick();
+                showPhotoSourcePicker();
+            });
+        }
+
+        dialog.setOnShowListener(d1 -> {
+            View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) {
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
+                BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+            }
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setNavigationBarColor(bgDialog);
+            }
+        });
+
+        btnConfirm.setOnClickListener(v -> {
+            triggerHapticTick();
+            String name = (etName != null) ? etName.getText().toString().trim() : "";
+            if (name.isEmpty()) {
+                name = "Mon banc public";
+            }
+            String location = (etLocation != null) ? etLocation.getText().toString().trim() : "";
+            String note = (etNote != null) ? etNote.getText().toString().trim() : "";
+
+            Bench newBench = collectionManager.addCustomBench(
+                    lat, lon, name, location, "Montréal",
+                    selectedMaterial[0], selectedBackrest[0], note, customPhotos
+            );
+
+            benchMapView.addCustomBench(newBench);
+            benchMapView.focusBench(newBench);
+            dialog.dismiss();
+            Toast.makeText(MainActivity.this, "Banc ajouté à « Mes bancs » ◆", Toast.LENGTH_SHORT).show();
         });
 
         dialog.show();
