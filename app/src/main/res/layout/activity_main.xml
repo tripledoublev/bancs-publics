@@ -98,7 +98,7 @@
                     android:layout_height="36dp"
                     android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Rendez-vous à mi-chemin"
+                    android:contentDescription="Trouvez un banc entre les deux"
                     android:padding="6dp"
                     android:src="@drawable/ic_meetup" />
 
