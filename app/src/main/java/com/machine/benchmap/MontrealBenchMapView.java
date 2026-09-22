@@ -1758,10 +1758,6 @@ public class MontrealBenchMapView extends View {
         canvas.drawCircle(cx, cy, 2.5f * density, paintCompassBg);
         canvas.drawCircle(cx, cy, 1.4f * density, paintCompassNorthNeedle);
 
-        // Precision Swiss "N" indicator above North needle
-        paintCompassText.setTextSize(7.5f * density);
-        canvas.drawText("N", cx, cy - needleLen - 1.8f * density, paintCompassText);
-
         canvas.restore();
     }
 
