@@ -38,6 +38,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.cardview.widget.CardView;
 
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -450,6 +451,18 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             btnShare.setBackgroundColor(chipBg);
             btnShare.setTextColor(textPrimary);
             btnShare.setStrokeColor(ColorStateList.valueOf(borderCard));
+        }
+
+        if (cardDetailNote != null) {
+            GradientDrawable noteBg = new GradientDrawable();
+            noteBg.setShape(GradientDrawable.RECTANGLE);
+            noteBg.setCornerRadius(10f * d);
+            noteBg.setColor(chipBg);
+            noteBg.setStroke((int) (1f * d), chipStroke);
+            cardDetailNote.setBackground(noteBg);
+        }
+        if (tvDetailNote != null) {
+            tvDetailNote.setTextColor(textPrimary);
         }
 
         // 4. Status Bar & Navigation Bar Appearance
@@ -1325,6 +1338,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                     layoutDetailPhotosStrip.removeAllViews();
                     for (String photoPath : sb.photoPaths) {
                         View thumbView = getLayoutInflater().inflate(R.layout.item_photo_thumb, layoutDetailPhotosStrip, false);
+                        MaterialCardView cvThumb = thumbView.findViewById(R.id.cv_thumb);
+                        if (cvThumb != null) {
+                            int thumbBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+                            int thumbBorder = isDarkMode ? Color.parseColor("#2C303B") : Color.parseColor("#E4E7EC");
+                            cvThumb.setCardBackgroundColor(thumbBg);
+                            cvThumb.setStrokeColor(thumbBorder);
+                        }
                         ImageView iv = thumbView.findViewById(R.id.iv_thumb);
                         View btnDel = thumbView.findViewById(R.id.btn_delete_thumb);
                         btnDel.setVisibility(View.GONE);
@@ -1355,6 +1375,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
         int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
         int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
 
         View root = view.findViewById(R.id.dialog_collections_root);
         if (root != null) {
@@ -1448,6 +1470,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                         ImageView ivChevron = holder.itemView.findViewById(R.id.iv_collection_chevron);
 
                         tvEmoji.setText(col.emoji);
+                        if (isDarkMode) {
+                            GradientDrawable emojiBg = new GradientDrawable();
+                            emojiBg.setColor(boxBg);
+                            emojiBg.setCornerRadius(10f * getResources().getDisplayMetrics().density);
+                            emojiBg.setStroke((int)(1f * getResources().getDisplayMetrics().density), borderC);
+                            tvEmoji.setBackground(emojiBg);
+                        }
                         tvTitle.setText(col.name);
                         tvTitle.setTextColor(textPri);
 
@@ -1519,6 +1548,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                         @Override
                         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
                             SavedBench sb = benches.get(position);
+                            CardView cardThumb = holder.itemView.findViewById(R.id.card_bench_thumb);
+                            if (cardThumb != null) cardThumb.setCardBackgroundColor(boxBg);
                             ImageView ivThumb = holder.itemView.findViewById(R.id.iv_bench_thumb);
                             TextView tvTitle = holder.itemView.findViewById(R.id.tv_bench_title);
                             TextView tvSub = holder.itemView.findViewById(R.id.tv_bench_sub);
@@ -1650,7 +1681,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         TextView btnInlineNewCollection = view.findViewById(R.id.btn_inline_new_collection);
         EditText etBenchNote = view.findViewById(R.id.et_bench_note);
         LinearLayout layoutPhotosStrip = view.findViewById(R.id.layout_photos_strip);
-        View btnAddPhoto = view.findViewById(R.id.btn_add_photo);
+        MaterialCardView btnAddPhoto = view.findViewById(R.id.btn_add_photo);
+        ImageView ivAddPhotoIcon = view.findViewById(R.id.iv_add_photo_icon);
+        TextView tvAddPhotoLabel = view.findViewById(R.id.tv_add_photo_label);
         MaterialButton btnSaveBenchConfirm = view.findViewById(R.id.btn_save_bench_confirm);
         MaterialButton btnRemoveSavedBench = view.findViewById(R.id.btn_remove_saved_bench);
 
@@ -1662,6 +1695,17 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (btnSaveDialogClose != null) {
             btnSaveDialogClose.setColorFilter(textSec);
             btnSaveDialogClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        if (btnAddPhoto != null) {
+            btnAddPhoto.setCardBackgroundColor(boxBg);
+            btnAddPhoto.setStrokeColor(borderC);
+        }
+        if (ivAddPhotoIcon != null) {
+            ivAddPhotoIcon.setColorFilter(textPri);
+        }
+        if (tvAddPhotoLabel != null) {
+            tvAddPhotoLabel.setTextColor(textPri);
         }
 
         if (etBenchNote != null) {
@@ -1766,6 +1810,11 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 }
                 for (String photoPath : workingPhotos) {
                     View thumbView = getLayoutInflater().inflate(R.layout.item_photo_thumb, layoutPhotosStrip, false);
+                    MaterialCardView cvThumb = thumbView.findViewById(R.id.cv_thumb);
+                    if (cvThumb != null) {
+                        cvThumb.setCardBackgroundColor(boxBg);
+                        cvThumb.setStrokeColor(borderC);
+                    }
                     ImageView iv = thumbView.findViewById(R.id.iv_thumb);
                     View btnDel = thumbView.findViewById(R.id.btn_delete_thumb);
 
@@ -2006,13 +2055,26 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             etColDesc.setHintTextColor(textSec);
         }
 
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            float d = getResources().getDisplayMetrics().density;
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navBottom + (int)(24 * d));
+            return insets;
+        });
+
         dialog.setOnShowListener(d -> {
             View bs = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
             if (bs != null) {
-                bs.setBackgroundColor(Color.TRANSPARENT);
+                GradientDrawable bsBg = new GradientDrawable();
+                bsBg.setColor(bgDialog);
+                bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+                bs.setBackground(bsBg);
                 BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(bs);
                 behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
                 behavior.setSkipCollapsed(true);
+            }
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setNavigationBarColor(bgDialog);
             }
         });
 
