@@ -38,70 +38,77 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="14dp"
-                android:paddingBottom="14dp">
+                android:paddingStart="14dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp">
 
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:background="@drawable/dot_swiss"
-                    android:layout_marginEnd="12dp" />
-
+                <!-- Left: Bench counter badge with live indicator dot -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/tv_app_title"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Les bancs de Montréal"
-                        android:textColor="@color/swiss_black"
-                        android:textSize="15sp"
-                        android:letterSpacing="0.01"
-                        android:fontFamily="sans-serif-medium"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv_bench_counter"
+                    android:id="@+id/layout_counter_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="9 602 BANCS"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:background="@drawable/bg_chip_counter"
-                    android:paddingStart="12dp"
+                    android:paddingStart="10dp"
                     android:paddingEnd="12dp"
                     android:paddingTop="6dp"
-                    android:paddingBottom="6dp"
-                    android:textColor="@color/swiss_black"
-                    android:textSize="11sp"
-                    android:letterSpacing="0.05"
-                    android:textStyle="bold"
-                    android:fontFamily="sans-serif-medium" />
+                    android:paddingBottom="6dp">
+
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
+                        android:background="@drawable/dot_swiss"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_bench_counter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="9 602 BANCS"
+                        android:textColor="@color/swiss_black"
+                        android:textSize="11sp"
+                        android:letterSpacing="0.05"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium" />
+                </LinearLayout>
+
+                <!-- Spacer pushing action controls cleanly to the right -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <!-- Action icons cluster -->
+                <ImageView
+                    android:id="@+id/btn_collections"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Mes collections de bancs"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_bookmark" />
 
                 <ImageView
                     android:id="@+id/btn_meetup"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="6dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Trouvez un banc entre les deux"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_meetup" />
 
                 <ImageView
                     android:id="@+id/btn_theme_toggle"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mode sombre"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_theme_moon" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -338,7 +345,19 @@
                     android:textColor="@color/swiss_red"
                     android:textSize="12sp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginEnd="10dp" />
+                    android:layout_marginEnd="8dp" />
+
+                <!-- Bookmark / Favorite Button -->
+                <ImageView
+                    android:id="@+id/btn_card_favorite"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:padding="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_circle_button"
+                    android:src="@drawable/ic_bookmark"
+                    android:contentDescription="Enregistrer ce banc"
+                    app:tint="@color/text_secondary" />
 
                 <!-- Random Next Button -->
                 <ImageView
@@ -346,7 +365,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:padding="8dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="6dp"
                     android:background="@drawable/bg_circle_button"
                     android:src="@android:drawable/ic_popup_sync"
                     android:contentDescription="Autre banc au hasard"
@@ -384,7 +403,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="12dp"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:id="@+id/tag_material"
@@ -430,6 +449,93 @@
                     android:textSize="11sp"
                     android:fontFamily="sans-serif-medium" />
             </LinearLayout>
+
+            <!-- User Saved Notes & Photos Section (if saved) -->
+            <LinearLayout
+                android:id="@+id/layout_detail_saved_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="14dp"
+                android:visibility="gone">
+
+                <!-- Collections badges -->
+                <TextView
+                    android:id="@+id/tv_detail_collections_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dans : ❤️ Coups de cœur"
+                    android:textColor="@color/swiss_red"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginBottom="6dp" />
+
+                <!-- Note card -->
+                <LinearLayout
+                    android:id="@+id/card_detail_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_chip_attribute"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📝"
+                        android:textSize="13sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_note"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Note..."
+                        android:textColor="@color/swiss_black"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:maxLines="2"
+                        android:ellipsize="end" />
+                </LinearLayout>
+
+                <!-- Photos strip -->
+                <HorizontalScrollView
+                    android:id="@+id/scroll_detail_photos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:overScrollMode="never"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/layout_detail_photos_strip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- Prompt to save if not saved -->
+            <TextView
+                android:id="@+id/btn_detail_add_note_photo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:text="🔖 Enregistrer avec note ou photo..."
+                android:textColor="@color/swiss_red"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
+                android:background="?attr/selectableItemBackground"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
 
             <!-- Action Buttons Row -->
             <LinearLayout

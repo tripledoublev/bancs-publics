@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dialog_new_col_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="24dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_chip_counter" />
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nouvelle liste"
+        android:textColor="@color/swiss_black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium" />
+
+    <!-- Emoji Selection Row -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="ICÔNE"
+        android:textColor="@color/text_secondary"
+        android:textSize="10.5sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:fontFamily="sans-serif-medium" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:id="@+id/layout_emoji_picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Name input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="NOM DE LA LISTE"
+        android:textColor="@color/text_secondary"
+        android:textSize="10.5sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:fontFamily="sans-serif-medium" />
+
+    <EditText
+        android:id="@+id/et_col_name"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="6dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:hint="ex: Bancs avec vue, Lectures d'automne..."
+        android:textColor="@color/swiss_black"
+        android:textColorHint="@color/text_muted"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif"
+        android:singleLine="true"
+        android:background="@drawable/bg_chip_attribute" />
+
+    <!-- Description input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="DESCRIPTION (OPTIONNEL)"
+        android:textColor="@color/text_secondary"
+        android:textSize="10.5sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
+        android:fontFamily="sans-serif-medium" />
+
+    <EditText
+        android:id="@+id/et_col_desc"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:layout_marginTop="6dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:hint="ex: Les meilleurs bancs calmes du quartier"
+        android:textColor="@color/swiss_black"
+        android:textColorHint="@color/text_muted"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif"
+        android:singleLine="true"
+        android:background="@drawable/bg_chip_attribute" />
+
+    <!-- Create Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_create_col_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="20dp"
+        android:text="CRÉER LA LISTE"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.04"
+        app:cornerRadius="12dp"
+        android:backgroundTint="@color/swiss_red"
+        android:textColor="#FFFFFF" />
+</LinearLayout>
