@@ -48,6 +48,7 @@ public class MontrealBenchMapView extends View {
         void onBenchSelected(Bench bench, double distanceMeters);
         void onBenchDeselected();
         void onMapLoaded(int totalBenches);
+        void onMapLongPressed(double lat, double lon, float screenX, float screenY);
     }
 
     public static class GeometryLayer {
@@ -296,6 +297,13 @@ public class MontrealBenchMapView extends View {
     private final Paint paintBenchSelectedGap = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintBenchSelectedCore = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Custom Bench Paints & Diamond Path
+    private final Paint paintCustomBenchHalo = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCustomBenchFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCustomBenchStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCustomBenchCenter = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path customDiamondPath = new Path();
+
     // User Pin & Heading Cone Paints
     private final Paint paintPinFill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint paintPinStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -378,6 +386,10 @@ public class MontrealBenchMapView extends View {
     private boolean isScaling = false;
     private long lastScaleEndTime = 0;
     private long lastPointerUpTime = 0;
+    private long lastDoubleTapTime = 0;
+    private long lastSingleTapUpTime = 0;
+    private float lastSingleTapUpX = 0;
+    private float lastSingleTapUpY = 0;
 
     // Vector Data & Spatial Index
     private final Object dataLock = new Object();
@@ -386,6 +398,7 @@ public class MontrealBenchMapView extends View {
     private final List<GeometryLayer> majorStreets = new ArrayList<>();
     private final List<GeometryLayer> minorStreets = new ArrayList<>();
     private final List<Bench> allBenches = new ArrayList<>();
+    private final List<Bench> customBenches = new ArrayList<>();
     private volatile SpatialBenchIndex spatialIndex = null;
     private volatile boolean isMapReady = false;
 
@@ -475,6 +488,20 @@ public class MontrealBenchMapView extends View {
 
         paintBenchSelectedCore.setStyle(Paint.Style.FILL);
 
+        // Custom Bench Paints
+        paintCustomBenchHalo.setStyle(Paint.Style.STROKE);
+        paintCustomBenchHalo.setStrokeWidth(2.8f * density);
+
+        paintCustomBenchFill.setStyle(Paint.Style.FILL);
+        paintCustomBenchFill.setColor(Color.parseColor("#FF6D00")); // Vibrant Terracotta / Amber
+
+        paintCustomBenchStroke.setStyle(Paint.Style.STROKE);
+        paintCustomBenchStroke.setStrokeWidth(1.2f * density);
+        paintCustomBenchStroke.setColor(Color.parseColor("#D84315"));
+
+        paintCustomBenchCenter.setStyle(Paint.Style.FILL);
+        paintCustomBenchCenter.setColor(COLOR_WHITE);
+
         // User Swiss Pin
         paintPinFill.setStyle(Paint.Style.FILL);
 
@@ -546,6 +573,7 @@ public class MontrealBenchMapView extends View {
             paintBenchStreet.setColor(DARK_BENCH_STREET);
             paintBenchPark.setColor(DARK_BENCH_PARK);
             paintBenchHalo.setColor(DARK_BENCH_HALO);
+            paintCustomBenchHalo.setColor(DARK_LAND);
             paintBenchSelected.setColor(COLOR_SWISS_RED);
             paintBenchSelectedGap.setColor(DARK_BENCH_GAP);
             paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
@@ -583,6 +611,7 @@ public class MontrealBenchMapView extends View {
             paintBenchStreet.setColor(LIGHT_BENCH_STREET);
             paintBenchPark.setColor(LIGHT_BENCH_PARK);
             paintBenchHalo.setColor(LIGHT_BENCH_HALO);
+            paintCustomBenchHalo.setColor(COLOR_WHITE);
             paintBenchSelected.setColor(COLOR_SWISS_RED);
             paintBenchSelectedGap.setColor(LIGHT_BENCH_GAP);
             paintBenchSelectedCore.setColor(COLOR_SWISS_RED);
@@ -785,18 +814,20 @@ public class MontrealBenchMapView extends View {
             @Override
             public boolean onDown(MotionEvent e) {
                 scroller.forceFinished(true);
-                if (animator != null && animator.isRunning()) animator.cancel();
+                if (System.currentTimeMillis() - lastDoubleTapTime > 400) {
+                    if (animator != null && animator.isRunning()) animator.cancel();
+                }
                 return true;
             }
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-                // Suppress single-finger scroll jumps when multiple touches or right after scaling
+                // Suppress single-finger scroll jumps when multiple touches or right after scaling or double-tap
                 if (isScaling || isRotating || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100) {
+                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100 || now - lastDoubleTapTime < 400) {
                     return false;
                 }
 
@@ -822,7 +853,7 @@ public class MontrealBenchMapView extends View {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100) {
+                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100 || now - lastDoubleTapTime < 400) {
                     return false;
                 }
 
@@ -845,12 +876,57 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
+                lastDoubleTapTime = System.currentTimeMillis();
                 if (!isScaling && !isRotating) {
                     double tapMercX = screenToMercX(e.getX(), e.getY());
                     double tapMercY = screenToMercY(e.getX(), e.getY());
                     animateToMerc(tapMercX, tapMercY, Math.min(MAX_SCALE, scale * 2.2f));
                 }
                 return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                if (isScaling || isRotating || scaleDetector.isInProgress() || (e != null && e.getPointerCount() > 1)) {
+                    return;
+                }
+                float touchX = e.getX();
+                float touchY = e.getY();
+                if (compassBounds.contains(touchX, touchY)) {
+                    return;
+                }
+
+                double touchMercX = screenToMercX(touchX, touchY);
+                double touchMercY = screenToMercY(touchX, touchY);
+                float hitRadiusPx = 14f * density;
+                double hitRadiusMerc = hitRadiusPx / scale;
+
+                Bench hit = null;
+                synchronized (dataLock) {
+                    for (int i = 0; i < customBenches.size(); i++) {
+                        Bench cb = customBenches.get(i);
+                        double dx = (cb.mercX - touchMercX) * scale;
+                        double dy = (cb.mercY - touchMercY) * scale;
+                        if (Math.hypot(dx, dy) <= hitRadiusPx) {
+                            hit = cb;
+                            break;
+                        }
+                    }
+                }
+                if (hit == null && spatialIndex != null) {
+                    hit = spatialIndex.findTapHit(touchMercX, touchMercY, hitRadiusMerc);
+                }
+
+                if (hit == null) {
+                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    double lat = Bench.toDegreesLat(touchMercY);
+                    double lon = Bench.toDegreesLon(touchMercX);
+                    if (mapListener != null) {
+                        mapListener.onMapLongPressed(lat, lon, touchX, touchY);
+                    }
+                } else {
+                    handleTap(touchX, touchY);
+                }
             }
         });
     }
@@ -862,7 +938,9 @@ public class MontrealBenchMapView extends View {
 
         if (action == MotionEvent.ACTION_DOWN) {
             scroller.forceFinished(true);
-            if (animator != null && animator.isRunning()) animator.cancel();
+            if (System.currentTimeMillis() - lastDoubleTapTime > 400) {
+                if (animator != null && animator.isRunning()) animator.cancel();
+            }
             if (rotationAnimator != null && rotationAnimator.isRunning()) rotationAnimator.cancel();
         }
 
@@ -910,7 +988,27 @@ public class MontrealBenchMapView extends View {
             }
         }
 
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+        if (action == MotionEvent.ACTION_UP) {
+            long now = System.currentTimeMillis();
+            float upX = event.getX();
+            float upY = event.getY();
+            float slopPx = 36f * density;
+            if (pointerCount == 1 && (now - lastSingleTapUpTime < 320) && (Math.hypot(upX - lastSingleTapUpX, upY - lastSingleTapUpY) < slopPx)) {
+                if (now - lastDoubleTapTime > 350 && !isScaling && !isRotating) {
+                    lastDoubleTapTime = now;
+                    double tapMercX = screenToMercX(upX, upY);
+                    double tapMercY = screenToMercY(upX, upY);
+                    animateToMerc(tapMercX, tapMercY, Math.min(MAX_SCALE, scale * 2.2f));
+                }
+                lastSingleTapUpTime = 0;
+            } else {
+                lastSingleTapUpTime = now;
+                lastSingleTapUpX = upX;
+                lastSingleTapUpY = upY;
+            }
+            isScaling = false;
+            isRotating = false;
+        } else if (action == MotionEvent.ACTION_CANCEL) {
             isScaling = false;
             isRotating = false;
         }
@@ -1192,9 +1290,58 @@ public class MontrealBenchMapView extends View {
         invalidate();
     }
 
+    public void setCustomBenches(List<Bench> benches) {
+        synchronized (dataLock) {
+            customBenches.clear();
+            if (benches != null) {
+                customBenches.addAll(benches);
+            }
+        }
+        postInvalidate();
+    }
+
+    public void addCustomBench(Bench bench) {
+        if (bench == null) return;
+        synchronized (dataLock) {
+            for (int i = 0; i < customBenches.size(); i++) {
+                if (customBenches.get(i).getId().equals(bench.getId())) {
+                    customBenches.set(i, bench);
+                    postInvalidate();
+                    return;
+                }
+            }
+            customBenches.add(bench);
+        }
+        postInvalidate();
+    }
+
+    public void removeCustomBench(String benchId) {
+        if (benchId == null) return;
+        synchronized (dataLock) {
+            for (int i = 0; i < customBenches.size(); i++) {
+                if (customBenches.get(i).getId().equals(benchId)) {
+                    customBenches.remove(i);
+                    break;
+                }
+            }
+        }
+        postInvalidate();
+    }
+
+    public List<Bench> getCustomBenches() {
+        synchronized (dataLock) {
+            return new ArrayList<>(customBenches);
+        }
+    }
+
     public Bench findBenchById(String benchId) {
         if (benchId == null || benchId.isEmpty()) return null;
         synchronized (dataLock) {
+            for (Bench b : customBenches) {
+                if (b.getId().equals(benchId)) {
+                    return b;
+                }
+            }
             for (Bench b : allBenches) {
                 if (b.getId().equals(benchId)) {
                     return b;
@@ -1220,15 +1367,27 @@ public class MontrealBenchMapView extends View {
         }
 
         SpatialBenchIndex index = this.spatialIndex;
-        if (index == null) return;
-
         double touchMercX = screenToMercX(touchX, touchY);
         double touchMercY = screenToMercY(touchX, touchY);
 
         float hitRadiusPx = 36f * density;
         double hitRadiusMerc = hitRadiusPx / scale;
 
-        Bench hit = index.findTapHit(touchMercX, touchMercY, hitRadiusMerc);
+        Bench hit = null;
+        synchronized (dataLock) {
+            for (int i = 0; i < customBenches.size(); i++) {
+                Bench cb = customBenches.get(i);
+                double dx = (cb.mercX - touchMercX) * scale;
+                double dy = (cb.mercY - touchMercY) * scale;
+                if (Math.hypot(dx, dy) <= hitRadiusPx) {
+                    hit = cb;
+                    break;
+                }
+            }
+        }
+        if (hit == null && index != null) {
+            hit = index.findTapHit(touchMercX, touchMercY, hitRadiusMerc);
+        }
 
         this.selectedBench = hit;
         if (hit != null) {
@@ -1445,15 +1604,75 @@ public class MontrealBenchMapView extends View {
                 canvas.drawLine(ux, uy, fx, fy, paintMeetupLine);
             }
 
-            // 7. Selected Bench Highlight (Swiss Concentric Rings)
+            // 6.7. Custom User Benches (Losange / Diamond ◆ Shape)
+            if (!customBenches.isEmpty()) {
+                float diamondRadius = Math.max(benchRadius * 1.45f, 5.2f * density);
+                for (int i = 0; i < customBenches.size(); i++) {
+                    Bench cb = customBenches.get(i);
+                    float cxBench = halfW + (float) ((cb.mercX - cX) * sc);
+                    float cyBench = halfH - (float) ((cb.mercY - cY) * sc);
+
+                    if (cxBench < -30f || cxBench > w + 30f || cyBench < -30f || cyBench > h + 30f) {
+                        continue;
+                    }
+
+                    customDiamondPath.reset();
+                    customDiamondPath.moveTo(cxBench, cyBench - diamondRadius);
+                    customDiamondPath.lineTo(cxBench + diamondRadius, cyBench);
+                    customDiamondPath.lineTo(cxBench, cyBench + diamondRadius);
+                    customDiamondPath.lineTo(cxBench - diamondRadius, cyBench);
+                    customDiamondPath.close();
+
+                    if (drawHalo) {
+                        canvas.drawPath(customDiamondPath, paintCustomBenchHalo);
+                    }
+                    canvas.drawPath(customDiamondPath, paintCustomBenchFill);
+                    canvas.drawPath(customDiamondPath, paintCustomBenchStroke);
+
+                    // Inner center dot / core
+                    canvas.drawCircle(cxBench, cyBench, diamondRadius * 0.35f, paintCustomBenchCenter);
+                }
+            }
+
+            // 7. Selected Bench Highlight (Swiss Concentric Rings or Concentric Diamonds)
             if (selectedBench != null) {
                 float bx = halfW + (float) ((selectedBench.mercX - cX) * sc);
                 float by = halfH - (float) ((selectedBench.mercY - cY) * sc);
-                float selRadius = Math.max(benchRadius, 4.0f * density);
 
-                canvas.drawCircle(bx, by, selRadius + 8.0f * density, paintBenchSelected);
-                canvas.drawCircle(bx, by, selRadius + 4.5f * density, paintBenchSelectedGap);
-                canvas.drawCircle(bx, by, selRadius + 1.5f * density, paintBenchSelectedCore);
+                if (selectedBench.isCustom) {
+                    float diamondRadius = Math.max(benchRadius * 1.45f, 5.2f * density);
+                    float selSize = diamondRadius + 7.5f * density;
+                    float gapSize = diamondRadius + 4.0f * density;
+
+                    Path dOuter = new Path();
+                    dOuter.moveTo(bx, by - selSize);
+                    dOuter.lineTo(bx + selSize, by);
+                    dOuter.lineTo(bx, by + selSize);
+                    dOuter.lineTo(bx - selSize, by);
+                    dOuter.close();
+                    canvas.drawPath(dOuter, paintBenchSelected);
+
+                    Path dGap = new Path();
+                    dGap.moveTo(bx, by - gapSize);
+                    dGap.lineTo(bx + gapSize, by);
+                    dGap.lineTo(bx, by + gapSize);
+                    dGap.lineTo(bx - gapSize, by);
+                    dGap.close();
+                    canvas.drawPath(dGap, paintBenchSelectedGap);
+
+                    Path dCore = new Path();
+                    dCore.moveTo(bx, by - diamondRadius);
+                    dCore.lineTo(bx + diamondRadius, by);
+                    dCore.lineTo(bx, by + diamondRadius);
+                    dCore.lineTo(bx - diamondRadius, by);
+                    dCore.close();
+                    canvas.drawPath(dCore, paintBenchSelectedCore);
+                } else {
+                    float selRadius = Math.max(benchRadius, 4.0f * density);
+                    canvas.drawCircle(bx, by, selRadius + 8.0f * density, paintBenchSelected);
+                    canvas.drawCircle(bx, by, selRadius + 4.5f * density, paintBenchSelectedGap);
+                    canvas.drawCircle(bx, by, selRadius + 1.5f * density, paintBenchSelectedCore);
+                }
             }
         }
 

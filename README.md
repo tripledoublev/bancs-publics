@@ -44,6 +44,14 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - **Privacy Blur Levels**: Choose exact coordinates, subtle ~150 m street blur, or ~300 m neighborhood blur to protect home address privacy.
   - **Fair Halfway Filtering**: Mathematical fairness algorithm finds candidate benches located at the exact halfway midpoint between both friends, minimizing walking time disparity.
   - **Interactive Meetup Mode**: Live geodesic connecting axis, Cobalt Blue friend pin, glowing amber candidate halos, and real-time travel comparison (`Vous: 1,4 km • Ami: 1,4 km (Écart: 20 m)`).
+- **◆ Ajout de bancs personnalisés (« Mes bancs »)**:
+  - **Appui long** sur une zone libre de la carte pour ajouter un banc public repéré sur le terrain mais absent du jeu de données officiel de la Ville.
+  - **Glyphe distinctif en losange (`◆`)** ambre/terracotta avec contour contrasté et cœur blanc, le différenciant instantanément des bancs circulaires standards.
+  - **Fiche d'ajout complète** : Coordonnées GPS précises, nom/repère, rue/parc, matériau (Bois, Métal, Béton, Pierre, Autre), présence d'un dossier, note personnelle et photographies locales.
+  - **Collection permanente « Mes bancs »** en tête des listes de favoris, modifiable et consultable 100% hors-ligne.
+- **🔍 Zoom Haute Précision Sub-Métrique**:
+  - Niveau de zoom poussé jusqu'à une échelle de 65 000 000 (~70 m d'envergure d'écran) permettant de distinguer l'emplacement exact de chaque banc par rapport aux allées et trottoirs.
+- **100% Local & Sécurisé**: Données et photos stockées exclusivement en local sur l'appareil (`collections.json` et `bench_photos/`). Aucun serveur, aucun pistage.
 - **100% Private & Open Source**: No tracking, no analytics, no ads, no cloud accounts, and no Google Play Services dependencies.
 
 ---
