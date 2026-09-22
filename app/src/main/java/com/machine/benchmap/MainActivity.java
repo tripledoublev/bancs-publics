@@ -803,6 +803,24 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             Log.d("BenchMap", "handleIntent: triggering test_compass_tap");
             benchMapView.post(() -> benchMapView.onCompassTapped());
         }
+        if (intent.hasExtra("test_scale")) {
+            float s = -1f;
+            if (intent.getExtras() != null) {
+                Object extra = intent.getExtras().get("test_scale");
+                if (extra instanceof Number) {
+                    s = ((Number) extra).floatValue();
+                } else if (extra != null) {
+                    try {
+                        s = Float.parseFloat(extra.toString());
+                    } catch (Exception ignored) {}
+                }
+            }
+            if (s > 0f) {
+                final float finalScale = s;
+                Log.d("BenchMap", "handleIntent: applying test_scale=" + finalScale);
+                benchMapView.post(() -> benchMapView.setScale(finalScale));
+            }
+        }
         if (intent.hasExtra("test_style")) {
             String testStyle = intent.getStringExtra("test_style");
             if (testStyle != null) {
