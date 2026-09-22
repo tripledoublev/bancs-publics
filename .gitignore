@@ -7,3 +7,5 @@ local.properties
 *.hprof
 data/geobase.json
 *.jks
+__pycache__/
+

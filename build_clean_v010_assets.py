@@ -11,6 +11,9 @@ import struct
 import math
 import os
 import time
+import sys
+
+sys.setrecursionlimit(30000)
 
 ASSETS_DIR = "/root/apps/BenchMap/app/src/main/assets"
 OUTPUT_BIN = os.path.join(ASSETS_DIR, "montreal_map.bin")
@@ -317,7 +320,46 @@ def main():
             out.extend(struct.pack('>4f', min_x, max_x, min_y, max_y))
             out.extend(struct.pack(f'>{count}f', *floats))
 
-    serialize_layer(native_data['island'], "island polygons")
+    def rdp(points, epsilon):
+        if len(points) <= 2: return points
+        start = points[0]; end = points[-1]
+        dx = end[0] - start[0]; dy = end[1] - start[1]
+        mag = math.hypot(dx, dy)
+        max_dist = 0.0; index = 0
+        for i in range(1, len(points) - 1):
+            p = points[i]
+            dist = math.hypot(p[0]-start[0], p[1]-start[1]) if mag == 0 else abs((p[1]-start[1])*dx - (p[0]-start[0])*dy) / mag
+            if dist > max_dist:
+                max_dist = dist; index = i
+        if max_dist > epsilon:
+            return rdp(points[:index+1], epsilon)[:-1] + rdp(points[index:], epsilon)
+        return [start, end]
+
+    def load_authentic_island_polygons():
+        island_files = [
+            '/root/apps/BenchMap/data/osm_ile_de_montreal.json',
+            '/root/apps/BenchMap/data/osm_ile_des_soeurs.json',
+            '/root/apps/BenchMap/data/osm_ile_bizard.json',
+            '/root/apps/BenchMap/data/osm_ile_ste_helene.json',
+            '/root/apps/BenchMap/data/osm_ile_notre_dame.json',
+            '/root/apps/BenchMap/data/osm_ile_visitation.json'
+        ]
+        islands = []
+        for path in island_files:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            ring = data['coordinates'][0]
+            simp = rdp(ring, 0.00005)
+            flat = []
+            for pt in simp:
+                flat.append(pt[1]) # lat
+                flat.append(pt[0]) # lon
+            islands.append(flat)
+            print(f"  Loaded island: {os.path.basename(path)} ({len(ring)} -> {len(simp)} pts)")
+        return islands
+
+    cleaned_islands = load_authentic_island_polygons()
+    serialize_layer(cleaned_islands, "island polygons")
     serialize_layer(native_data['parks'], "park polygons")
     serialize_layer(major_streets, "major arteries & bridges")
     serialize_layer(minor_streets, "residential & local streets")

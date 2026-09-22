@@ -43,7 +43,7 @@
                     android:id="@+id/tv_save_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Enregistrer dans mes listes"
+                    android:text="Ajouter à une liste"
                     android:textColor="@color/swiss_black"
                     android:textSize="17sp"
                     android:textStyle="bold"

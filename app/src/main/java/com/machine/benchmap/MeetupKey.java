@@ -194,14 +194,14 @@ public class MeetupKey {
      */
     public static String formatShareText(String key, String optionalLocationName) {
         StringBuilder sb = new StringBuilder();
-        sb.append("🤝 Retrouvons-nous sur un banc à mi-chemin !\n\n");
-        if (optionalLocationName != null && !optionalLocationName.isEmpty()) {
-            sb.append("Je suis vers : ").append(optionalLocationName).append("\n\n");
+        sb.append("🤝 Retrouvons-nous à mi-chemin !\n\n");
+        sb.append("J'ai préparé un point de rencontre confidentiel sur BenchMap (zéro serveur, 100% hors-ligne).\n\n");
+        if (optionalLocationName != null && !optionalLocationName.isEmpty() && !"Ma position".equals(optionalLocationName)) {
+            sb.append("Mon secteur : ").append(optionalLocationName).append("\n\n");
         }
-        sb.append("Voici ma clé de rencontre (100% sécurisée & anonyme) :\n");
-        sb.append(key).append("\n\n");
-        sb.append("Ou ouvre directement BenchMap :\n");
-        sb.append("benchmap://meet?k=").append(key);
+        sb.append("Ouvre ce lien pour révéler nos bancs idéaux :\n");
+        sb.append("benchmap://meet?k=").append(key).append("\n\n");
+        sb.append("(Clé directe : ").append(key).append(")");
         return sb.toString();
     }
 }

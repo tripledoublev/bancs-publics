@@ -25,11 +25,20 @@
                 android:id="@+id/tv_dialog_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Trouvez un banc entre les deux"
+                android:text="Trouver un banc entre les deux"
                 android:textSize="17sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/text_primary" />
+
+            <TextView
+                android:id="@+id/tv_dialog_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Le point d'équilibre • Se retrouver à mi-chemin"
+                android:textSize="12sp"
+                android:textColor="@color/text_muted" />
         </LinearLayout>
 
         <ImageView
@@ -43,11 +52,30 @@
             app:tint="@color/text_muted" />
     </LinearLayout>
 
+    <!-- Explanatory Swiss Concept Card -->
+    <LinearLayout
+        android:id="@+id/card_meetup_explainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_chip_counter"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Plutôt que de chercher où vous retrouver, BenchMap calcule le banc idéal situé exactement à mi-chemin entre vous et un proche. Votre position est floutée (~300m) pour préserver votre vie privée. Zéro compte, zéro serveur, 100% hors-ligne."
+            android:textSize="11.5sp"
+            android:lineSpacingExtra="2dp"
+            android:textColor="@color/text_muted" />
+    </LinearLayout>
+
     <!-- Tab Switcher -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="44dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="14dp"
         android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
@@ -55,7 +83,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="GÉNÉRER MA CLÉ"
+            android:text="1. INVITER UN AMI"
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.04"
@@ -68,7 +96,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="ENTRER UNE CLÉ"
+            android:text="2. REJOINDRE"
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.04"
@@ -83,9 +111,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="14dp">
+        android:layout_marginTop="12dp">
 
-        <!-- Monospace Key Display Box -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Envoyez cette invitation confidentielle. Dès que votre proche l'ouvre, vos bancs à mi-chemin apparaîtront sur la carte :"
+            android:textSize="11.5sp"
+            android:textColor="@color/text_muted" />
+
+        <!-- Link Display Box -->
         <LinearLayout
             android:id="@+id/box_key_display"
             android:layout_width="match_parent"
@@ -93,13 +128,13 @@
             android:orientation="vertical"
             android:gravity="center"
             android:padding="12dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:background="@drawable/bg_chip_counter">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="VOTRE CLÉ DE RENCONTRE"
+                android:text="LIEN DE RENCONTRE CONFIDENTIEL"
                 android:textSize="9sp"
                 android:letterSpacing="0.08"
                 android:textStyle="bold"
@@ -110,10 +145,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="BM1-...."
-                android:textSize="17sp"
+                android:text="benchmap://meet?k=BM1-...."
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.02"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true"
                 android:textColor="@color/text_primary" />
@@ -127,11 +162,11 @@
             android:layout_marginTop="12dp">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_copy_key"
+                android:id="@+id/btn_share_invite"
                 android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:text="📋 COPIER"
+                android:layout_height="48dp"
+                android:layout_weight="1.6"
+                android:text="↗ PARTAGER L'INVITATION"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
@@ -139,11 +174,11 @@
                 android:layout_marginEnd="6dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_share_invite"
+                android:id="@+id/btn_copy_key"
                 android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1.6"
-                android:text="↗ PARTAGER (SMS / SIGNAL)"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="📋 COPIER"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
@@ -157,28 +192,26 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="12dp"
         android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="CLÉ REÇUE DE VOTRE AMI :"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
+            android:text="Collez le lien ou la clé reçue pour calculer l'épicentre et révéler les bancs à mi-chemin :"
+            android:textSize="11.5sp"
             android:textColor="@color/text_muted" />
 
         <EditText
             android:id="@+id/et_friend_key"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_chip_counter"
-            android:hint="Collez la clé ou le lien reçu"
-            android:inputType="textCapCharacters|textNoSuggestions"
+            android:hint="Collez le lien ou la clé (BM1-...)"
+            android:inputType="textUri|textNoSuggestions"
             android:fontFamily="monospace"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             android:textColor="@color/text_primary" />
