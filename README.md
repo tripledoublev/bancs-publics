@@ -1,6 +1,6 @@
 # BenchMap (Les bancs de Montréal) 🪑
 
-> *Une cartographie vectorielle indigène, souveraine et 100% hors-ligne des 9 602 bancs publics de l'Île de Montréal. Conçue dans la pure tradition du style graphique suisse : rigueur géométrique, typographie concise, zéro télémétrie et respect intégral de la vie privée.*
+> *« S'asseoir à Montréal n'est pas un geste anodin : c'est habiter la ville à hauteur de regard, faire corps avec ses ruelles ombragées, ses parcs centenaires et ses rives fluviales. BenchMap est un atlas vectoriel hors-ligne, conçu dans le respect de l'esprit typographique suisse, offrant à chaque marcheur, flâneur et citoyen une cartographie souveraine, instantanée et intime des 9 602 bancs publics de la métropole. Zéro trace, zéro serveur, pure liberté urbaine. »*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android_10+-3DDC84.svg?logo=android&logoColor=white)](https://android.com)
@@ -26,7 +26,8 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
     - *Noir Argentique* (Monochrome contrasté)
 - **👆 Gestuelle Fluide & Boussole Interactive**:
   - **Double-tap zoom** : Zoom instantané et centrage fluide sur la zone tapée.
-  - **Rotation à 2 doigts** : Orientation de la carte avec retour haptique d'alignement au Nord.
+  - **Rotation libre à 2 doigts** : Orientation de la carte avec retour haptique d'aimantation au Nord.
+  - **Épingles verticales stabilisées** : Les épingles (position courante et ami) contre-pivotent automatiquement pour rester toujours droites et verticales face à l'utilisateur, quelle que soit l'orientation de la carte.
   - **Boussole Swiss** : Indique le Nord magnétique en continu ; un simple tap réinitialise l'orientation au Nord et effectue un zoom avant.
 - **Ultra-Fast Binary Map Format**: Custom IEEE 754 float binary format (`montreal_map.bin`) loads the complete municipal bench cartography in **<70 ms** with zero JSON garbage collection overhead.
 - **Dual Swiss Themes**:
