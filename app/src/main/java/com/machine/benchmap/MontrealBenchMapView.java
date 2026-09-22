@@ -1495,7 +1495,13 @@ public class MontrealBenchMapView extends View {
             canvas.drawPath(headingPath, paintHeadingCone);
         }
 
-        // 3. Ground Shadow
+        // 3. Ground Shadow & 4. Swiss Teardrop Pin Geometry
+        // Counter-rotate by -mapRotationDegrees around the pin anchor point (ux, uy) so the pin always stands upright
+        canvas.save();
+        if (mapRotationDegrees != 0f) {
+            canvas.rotate(-mapRotationDegrees, ux, uy);
+        }
+
         RectF shadowRect = new RectF(
                 ux - 8.5f * density,
                 uy - 2.5f * density,
@@ -1504,7 +1510,6 @@ public class MontrealBenchMapView extends View {
         );
         canvas.drawOval(shadowRect, paintPinShadow);
 
-        // 4. Swiss Teardrop Pin Geometry
         float headCenterY = uy - 22f * density;
         float headRadius = 8.5f * density;
 
@@ -1533,6 +1538,7 @@ public class MontrealBenchMapView extends View {
         canvas.drawPath(pinPath, paintPinFill);
         canvas.drawPath(pinPath, paintPinStroke);
         canvas.drawCircle(ux, headCenterY, 3.0f * density, paintPinDot);
+        canvas.restore();
     }
 
     private void drawFriendPin(Canvas canvas, float fx, float fy, float blurMeters) {
@@ -1546,7 +1552,13 @@ public class MontrealBenchMapView extends View {
             }
         }
 
-        // 2. Ground Shadow
+        // 2. Ground Shadow & 3. Swiss Teardrop Pin Geometry (Cobalt Blue for Friend)
+        // Counter-rotate by -mapRotationDegrees around the pin anchor point (fx, fy) so the pin always stands upright
+        canvas.save();
+        if (mapRotationDegrees != 0f) {
+            canvas.rotate(-mapRotationDegrees, fx, fy);
+        }
+
         RectF shadowRect = new RectF(
                 fx - 8.5f * density,
                 fy - 2.5f * density,
@@ -1555,7 +1567,6 @@ public class MontrealBenchMapView extends View {
         );
         canvas.drawOval(shadowRect, paintPinShadow);
 
-        // 3. Swiss Teardrop Pin Geometry (Cobalt Blue for Friend)
         float headCenterY = fy - 22f * density;
         float headRadius = 8.5f * density;
 
@@ -1581,6 +1592,7 @@ public class MontrealBenchMapView extends View {
         canvas.drawPath(friendPinPath, paintFriendPinFill);
         canvas.drawPath(friendPinPath, paintFriendPinStroke);
         canvas.drawCircle(fx, headCenterY, 3.0f * density, paintPinDot);
+        canvas.restore();
     }
 
     public void setMeetup(double fLat, double fLon, int fBlurMeters, List<Bench> halfwayList) {
