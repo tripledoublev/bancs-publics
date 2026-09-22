@@ -8,11 +8,13 @@ import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -237,6 +239,21 @@ public class MontrealBenchMapView extends View {
     // Reusable line batch buffer for hardware drawLines (avoids Path allocations)
     private final float[] lineBuffer = new float[8192];
 
+    // Map Rotation & Two-Finger Twist
+    private float mapRotationDegrees = 0f;
+    private double lastRotationAngle = 0;
+    private boolean isRotating = false;
+    private ValueAnimator rotationAnimator = null;
+    private final RectF compassBounds = new RectF();
+    private float compassTopPx = -1f;
+    private final Paint paintCompassBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCompassStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCompassNorthNeedle = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCompassSouthNeedle = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paintCompassText = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path compassNorthPath = new Path();
+    private final Path compassSouthPath = new Path();
+
     // Geographic center of Montreal (Mount Royal)
     public static final double CENTER_LAT = 45.50884;
     public static final double CENTER_LON = -73.58781;
@@ -376,6 +393,16 @@ public class MontrealBenchMapView extends View {
         paintMeetupBenchHalo.setStrokeWidth(2.2f * density);
         paintMeetupBenchCore.setStyle(Paint.Style.FILL);
 
+        paintCompassBg.setStyle(Paint.Style.FILL);
+        paintCompassStroke.setStyle(Paint.Style.STROKE);
+        paintCompassStroke.setStrokeWidth(1.2f * density);
+        paintCompassNorthNeedle.setStyle(Paint.Style.FILL);
+        paintCompassNorthNeedle.setColor(COLOR_SWISS_RED);
+        paintCompassSouthNeedle.setStyle(Paint.Style.FILL);
+        paintCompassText.setStyle(Paint.Style.FILL);
+        paintCompassText.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
+        paintCompassText.setTextAlign(Paint.Align.CENTER);
+
         applyThemeColors();
 
         initGestures();
@@ -426,6 +453,11 @@ public class MontrealBenchMapView extends View {
             paintFriendBlurFill.setColor(Color.argb(35, 59, 130, 246));
             paintFriendBlurStroke.setColor(Color.argb(120, 59, 130, 246));
             paintMeetupLine.setColor(Color.parseColor("#60A5FA"));
+
+            paintCompassBg.setColor(Color.parseColor("#181A20"));
+            paintCompassStroke.setColor(Color.parseColor("#262932"));
+            paintCompassSouthNeedle.setColor(Color.parseColor("#8E93A0"));
+            paintCompassText.setColor(Color.parseColor("#F4F5F7"));
         } else {
             paintLand.setColor(LIGHT_LAND);
             paintShoreline.setColor(LIGHT_SHORELINE);
@@ -458,6 +490,11 @@ public class MontrealBenchMapView extends View {
             paintFriendBlurFill.setColor(Color.argb(30, 37, 99, 235));
             paintFriendBlurStroke.setColor(Color.argb(100, 37, 99, 235));
             paintMeetupLine.setColor(Color.parseColor("#3B82F6"));
+
+            paintCompassBg.setColor(Color.WHITE);
+            paintCompassStroke.setColor(Color.parseColor("#E4E7EC"));
+            paintCompassSouthNeedle.setColor(Color.parseColor("#94A3B8"));
+            paintCompassText.setColor(Color.parseColor("#111318"));
         }
 
         paintMeetupBenchHalo.setColor(Color.parseColor("#F59E0B"));
@@ -530,7 +567,7 @@ public class MontrealBenchMapView extends View {
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
                 // Suppress single-finger scroll jumps when multiple touches or right after scaling
-                if (isScaling || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
+                if (isScaling || isRotating || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
                 long now = System.currentTimeMillis();
@@ -538,15 +575,25 @@ public class MontrealBenchMapView extends View {
                     return false;
                 }
 
-                centerMercX += distanceX / scale;
-                centerMercY -= distanceY / scale;
+                if (mapRotationDegrees != 0f) {
+                    double rad = Math.toRadians(mapRotationDegrees);
+                    float cos = (float) Math.cos(rad);
+                    float sin = (float) Math.sin(rad);
+                    float rotDistX = distanceX * cos + distanceY * sin;
+                    float rotDistY = -distanceX * sin + distanceY * cos;
+                    centerMercX += rotDistX / scale;
+                    centerMercY -= rotDistY / scale;
+                } else {
+                    centerMercX += distanceX / scale;
+                    centerMercY -= distanceY / scale;
+                }
                 invalidate();
                 return true;
             }
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                if (isScaling || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
+                if (isScaling || isRotating || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
                 long now = System.currentTimeMillis();
@@ -565,7 +612,7 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
-                if (!isScaling) {
+                if (!isScaling && !isRotating) {
                     handleTap(e.getX(), e.getY());
                 }
                 return true;
@@ -573,9 +620,9 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
-                if (!isScaling) {
-                    double tapMercX = screenToMercX(e.getX());
-                    double tapMercY = screenToMercY(e.getY());
+                if (!isScaling && !isRotating) {
+                    double tapMercX = screenToMercX(e.getX(), e.getY());
+                    double tapMercY = screenToMercY(e.getX(), e.getY());
                     animateToMerc(tapMercX, tapMercY, Math.min(MAX_SCALE, scale * 2.2f));
                 }
                 return true;
@@ -586,18 +633,61 @@ public class MontrealBenchMapView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
+        int pointerCount = event.getPointerCount();
+
         if (action == MotionEvent.ACTION_DOWN) {
             scroller.forceFinished(true);
             if (animator != null && animator.isRunning()) animator.cancel();
+            if (rotationAnimator != null && rotationAnimator.isRunning()) rotationAnimator.cancel();
         }
-        if (action == MotionEvent.ACTION_POINTER_DOWN) {
+
+        if (action == MotionEvent.ACTION_POINTER_DOWN && pointerCount >= 2) {
             isScaling = true;
+            float p0x = event.getX(0);
+            float p0y = event.getY(0);
+            float p1x = event.getX(1);
+            float p1y = event.getY(1);
+            lastRotationAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
+            isRotating = true;
         }
+
+        if (action == MotionEvent.ACTION_MOVE && pointerCount >= 2 && isRotating) {
+            float p0x = event.getX(0);
+            float p0y = event.getY(0);
+            float p1x = event.getX(1);
+            float p1y = event.getY(1);
+            double currentAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
+            double delta = currentAngle - lastRotationAngle;
+            while (delta > 180.0) delta -= 360.0;
+            while (delta < -180.0) delta += 360.0;
+
+            if (Math.abs(delta) > 0.05) {
+                float oldRot = mapRotationDegrees;
+                mapRotationDegrees += (float) delta;
+                mapRotationDegrees = (mapRotationDegrees % 360f + 360f) % 360f;
+
+                // Snap to North if within 3.5 degrees
+                if (mapRotationDegrees < 3.5f || mapRotationDegrees > 356.5f) {
+                    if (oldRot != 0f) {
+                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    }
+                    mapRotationDegrees = 0f;
+                }
+                lastRotationAngle = currentAngle;
+                invalidate();
+            }
+        }
+
         if (action == MotionEvent.ACTION_POINTER_UP) {
             lastPointerUpTime = System.currentTimeMillis();
+            if (pointerCount <= 2) {
+                isRotating = false;
+            }
         }
+
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             isScaling = false;
+            isRotating = false;
         }
 
         scaleDetector.onTouchEvent(event);
@@ -605,7 +695,7 @@ public class MontrealBenchMapView extends View {
         long now = System.currentTimeMillis();
         boolean recentlyPinched = (now - lastPointerUpTime < 100) || (now - lastScaleEndTime < 100);
 
-        if (event.getPointerCount() == 1 && !isScaling && !scaleDetector.isInProgress() && !recentlyPinched) {
+        if (pointerCount == 1 && !isScaling && !isRotating && !scaleDetector.isInProgress() && !recentlyPinched) {
             gestureDetector.onTouchEvent(event);
         }
         return true;
@@ -622,8 +712,18 @@ public class MontrealBenchMapView extends View {
             lastFlingX = curX;
             lastFlingY = curY;
 
-            centerMercX -= dx / scale;
-            centerMercY += dy / scale;
+            if (mapRotationDegrees != 0f) {
+                double rad = Math.toRadians(mapRotationDegrees);
+                float cos = (float) Math.cos(rad);
+                float sin = (float) Math.sin(rad);
+                float rotDx = dx * cos + dy * sin;
+                float rotDy = -dx * sin + dy * cos;
+                centerMercX -= rotDx / scale;
+                centerMercY += rotDy / scale;
+            } else {
+                centerMercX -= dx / scale;
+                centerMercY += dy / scale;
+            }
             postInvalidateOnAnimation();
         }
     }
@@ -888,11 +988,17 @@ public class MontrealBenchMapView extends View {
     }
 
     private void handleTap(float touchX, float touchY) {
+        if (compassBounds.contains(touchX, touchY)) {
+            performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
+            onCompassTapped();
+            return;
+        }
+
         SpatialBenchIndex index = this.spatialIndex;
         if (index == null) return;
 
-        double touchMercX = screenToMercX(touchX);
-        double touchMercY = screenToMercY(touchY);
+        double touchMercX = screenToMercX(touchX, touchY);
+        double touchMercY = screenToMercY(touchX, touchY);
 
         float hitRadiusPx = 36f * density;
         double hitRadiusMerc = hitRadiusPx / scale;
@@ -930,11 +1036,17 @@ public class MontrealBenchMapView extends View {
         double cY = centerMercY;
         float sc = scale;
 
-        // Viewport bounds in Mercator space
-        double viewMinX = cX + (-40f - halfW) / sc;
-        double viewMaxX = cX + (w + 40f - halfW) / sc;
-        double viewMinY = cY - (h + 40f - halfH) / sc;
-        double viewMaxY = cY - (-40f - halfH) / sc;
+        canvas.save();
+        if (mapRotationDegrees != 0f) {
+            canvas.rotate(mapRotationDegrees, halfW, halfH);
+        }
+
+        // Viewport bounds in Mercator space (expanded radius to ensure zero clipping during rotation)
+        double viewRadius = Math.hypot(halfW + 60f * density, halfH + 60f * density) / sc;
+        double viewMinX = cX - viewRadius;
+        double viewMaxX = cX + viewRadius;
+        double viewMinY = cY - viewRadius;
+        double viewMaxY = cY + viewRadius;
 
         synchronized (dataLock) {
             // 2. Island Landmass
@@ -1080,6 +1192,11 @@ public class MontrealBenchMapView extends View {
             float fy = halfH - (float) ((latToMercatorY(friendLat) - cY) * sc);
             drawFriendPin(canvas, fx, fy, friendBlurMeters);
         }
+
+        canvas.restore();
+
+        // 10. Swiss Minimal Compass Rose (always present for one-tap orientation & zoom)
+        drawSwissCompass(canvas, w, h);
     }
 
     private void drawUserPin(Canvas canvas, float ux, float uy, float accuracyMeters) {
@@ -1264,12 +1381,144 @@ public class MontrealBenchMapView extends View {
         return (getHeight() * 0.5f) - (float) ((mercY - centerMercY) * scale);
     }
 
+    public double screenToMercX(float px, float py) {
+        float halfW = getWidth() * 0.5f;
+        float halfH = getHeight() * 0.5f;
+        float x = px - halfW;
+        float y = py - halfH;
+        if (mapRotationDegrees != 0f) {
+            double rad = Math.toRadians(mapRotationDegrees);
+            float cos = (float) Math.cos(rad);
+            float sin = (float) Math.sin(rad);
+            float x0 = x * cos + y * sin;
+            return centerMercX + x0 / scale;
+        }
+        return centerMercX + x / scale;
+    }
+
+    public double screenToMercY(float px, float py) {
+        float halfW = getWidth() * 0.5f;
+        float halfH = getHeight() * 0.5f;
+        float x = px - halfW;
+        float y = py - halfH;
+        if (mapRotationDegrees != 0f) {
+            double rad = Math.toRadians(mapRotationDegrees);
+            float cos = (float) Math.cos(rad);
+            float sin = (float) Math.sin(rad);
+            float y0 = -x * sin + y * cos;
+            return centerMercY - y0 / scale;
+        }
+        return centerMercY - y / scale;
+    }
+
     private double screenToMercX(float px) {
-        return centerMercX + (px - getWidth() * 0.5f) / scale;
+        return screenToMercX(px, getHeight() * 0.5f);
     }
 
     private double screenToMercY(float py) {
-        return centerMercY - (py - getHeight() * 0.5f) / scale;
+        return screenToMercY(getWidth() * 0.5f, py);
+    }
+
+    public void setCompassTopMargin(float topPx) {
+        this.compassTopPx = topPx;
+        invalidate();
+    }
+
+    private void drawSwissCompass(Canvas canvas, int w, int h) {
+        float radius = 21f * density;
+        float cx = w - 16f * density - radius;
+        float cy = (compassTopPx > 0) ? (compassTopPx + radius) : (160f * density);
+
+        compassBounds.set(cx - radius - 8f * density, cy - radius - 8f * density,
+                cx + radius + 8f * density, cy + radius + 8f * density);
+
+        // Ground subtle shadow
+        RectF shadowRect = new RectF(
+                cx - radius - 1f * density,
+                cy - radius + 1f * density,
+                cx + radius + 1f * density,
+                cy + radius + 3f * density
+        );
+        canvas.drawOval(shadowRect, paintPinShadow);
+
+        // Background & stroke
+        canvas.drawCircle(cx, cy, radius, paintCompassBg);
+        canvas.drawCircle(cx, cy, radius, paintCompassStroke);
+
+        // Compass needle rotated with the map
+        canvas.save();
+        canvas.rotate(mapRotationDegrees, cx, cy);
+
+        float needleLen = radius * 0.65f;
+        float needleW = 4.2f * density;
+
+        // North needle (Swiss Red triangle)
+        compassNorthPath.reset();
+        compassNorthPath.moveTo(cx, cy - needleLen);
+        compassNorthPath.lineTo(cx - needleW, cy);
+        compassNorthPath.lineTo(cx + needleW, cy);
+        compassNorthPath.close();
+        canvas.drawPath(compassNorthPath, paintCompassNorthNeedle);
+
+        // South needle (Muted slate triangle)
+        compassSouthPath.reset();
+        compassSouthPath.moveTo(cx, cy + needleLen);
+        compassSouthPath.lineTo(cx - needleW, cy);
+        compassSouthPath.lineTo(cx + needleW, cy);
+        compassSouthPath.close();
+        canvas.drawPath(compassSouthPath, paintCompassSouthNeedle);
+
+        // Center pivot dot
+        canvas.drawCircle(cx, cy, 2.5f * density, paintCompassBg);
+        canvas.drawCircle(cx, cy, 1.4f * density, paintCompassNorthNeedle);
+
+        // Precision Swiss "N" indicator above North needle
+        paintCompassText.setTextSize(7.5f * density);
+        canvas.drawText("N", cx, cy - needleLen - 1.8f * density, paintCompassText);
+
+        canvas.restore();
+    }
+
+    /**
+     * Pressing on the Swiss compass zooms in and resets the map orientation to True North.
+     */
+    public void onCompassTapped() {
+        resetRotationToNorth();
+        float targetScale = Math.min(MAX_SCALE, scale * 2.0f);
+        animateToMerc(centerMercX, centerMercY, targetScale);
+    }
+
+    public void resetRotationToNorth() {
+        if (rotationAnimator != null && rotationAnimator.isRunning()) {
+            rotationAnimator.cancel();
+        }
+        float startRot = mapRotationDegrees;
+        if (startRot == 0f) return;
+
+        float diff = (((-startRot % 360f) + 540f) % 360f) - 180f;
+        float targetRot = startRot + diff;
+
+        rotationAnimator = ValueAnimator.ofFloat(startRot, targetRot);
+        rotationAnimator.setDuration(280);
+        rotationAnimator.setInterpolator(new DecelerateInterpolator());
+        rotationAnimator.addUpdateListener(animation -> {
+            float val = (float) animation.getAnimatedValue();
+            mapRotationDegrees = (val % 360f + 360f) % 360f;
+            if (Math.abs(mapRotationDegrees) < 0.2f || Math.abs(mapRotationDegrees - 360f) < 0.2f) {
+                mapRotationDegrees = 0f;
+            }
+            invalidate();
+        });
+        rotationAnimator.start();
+    }
+
+    public float getMapRotation() {
+        return mapRotationDegrees;
+    }
+
+    public void setMapRotation(float rotationDegrees) {
+        this.mapRotationDegrees = (rotationDegrees % 360f + 360f) % 360f;
+        invalidate();
     }
 
     public static double lonToMercatorX(double lon) {

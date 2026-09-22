@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -261,8 +262,15 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
             if (layoutHeader != null) {
                 FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) layoutHeader.getLayoutParams();
-                lp.topMargin = statusInsets.top + (int) (12 * getResources().getDisplayMetrics().density);
+                lp.topMargin = statusInsets.top + (int) (4 * getResources().getDisplayMetrics().density);
                 layoutHeader.setLayoutParams(lp);
+
+                layoutHeader.post(() -> {
+                    if (benchMapView != null) {
+                        float margin = 12f * getResources().getDisplayMetrics().density;
+                        benchMapView.setCompassTopMargin(layoutHeader.getBottom() + margin);
+                    }
+                });
             }
 
             if (layoutBottomControls != null) {
@@ -756,7 +764,30 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     }
 
     private void handleIntent(Intent intent) {
-        if (intent == null || intent.getData() == null) return;
+        if (intent == null) return;
+        if (intent.hasExtra("test_rotation")) {
+            float rot = -1f;
+            if (intent.getExtras() != null) {
+                Object extra = intent.getExtras().get("test_rotation");
+                if (extra instanceof Number) {
+                    rot = ((Number) extra).floatValue();
+                } else if (extra != null) {
+                    try {
+                        rot = Float.parseFloat(extra.toString());
+                    } catch (Exception ignored) {}
+                }
+            }
+            if (rot >= 0f) {
+                final float finalRot = rot;
+                Log.d("BenchMap", "handleIntent: applying test_rotation=" + finalRot);
+                benchMapView.post(() -> benchMapView.setMapRotation(finalRot));
+            }
+        }
+        if (intent.getBooleanExtra("test_compass_tap", false)) {
+            Log.d("BenchMap", "handleIntent: triggering test_compass_tap");
+            benchMapView.post(() -> benchMapView.onCompassTapped());
+        }
+        if (intent.getData() == null) return;
         Uri data = intent.getData();
         if ("benchmap".equalsIgnoreCase(data.getScheme()) && "meet".equalsIgnoreCase(data.getHost())) {
             String key = data.getQueryParameter("k");
@@ -788,50 +819,54 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         Location bestDeviceLoc = getBestDeviceLocation();
         if (bestDeviceLoc == null) {
-            Toast.makeText(this, "Acquisition de votre position GPS...", Toast.LENGTH_SHORT).show();
-            startLocationUpdates();
+            Toast.makeText(this, "Position GPS introuvable pour le calcul", Toast.LENGTH_SHORT).show();
+            return;
         }
-        final double baseLat = (bestDeviceLoc != null) ? bestDeviceLoc.getLatitude() : MontrealBenchMapView.CENTER_LAT;
-        final double baseLon = (bestDeviceLoc != null) ? bestDeviceLoc.getLongitude() : MontrealBenchMapView.CENTER_LON;
-        final String baseName = (bestDeviceLoc != null) ? "Ma position" : "Montréal";
+        double baseLat = bestDeviceLoc.getLatitude();
+        double baseLon = bestDeviceLoc.getLongitude();
+        String baseName = "Montréal";
 
-        // Dynamic theme styling for dialog
-        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        // Swiss theme coloring
+        int bgCard = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
         int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
         int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
         int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
         int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
 
-        View dialogRoot = view.findViewById(R.id.dialog_meetup_root);
-        TextView tvDialogTitle = view.findViewById(R.id.tv_dialog_title);
-        if (dialogRoot != null) {
-            GradientDrawable dialogBgDrawable = new GradientDrawable();
-            dialogBgDrawable.setColor(bgDialog);
-            dialogBgDrawable.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
-            dialogRoot.setBackground(dialogBgDrawable);
+        View root = view.findViewById(R.id.dialog_meetup_root);
+        if (root != null) {
+            GradientDrawable rootDrawable = new GradientDrawable();
+            rootDrawable.setShape(GradientDrawable.RECTANGLE);
+            rootDrawable.setCornerRadii(new float[]{40, 40, 40, 40, 0, 0, 0, 0});
+            rootDrawable.setColor(bgCard);
+            root.setBackground(rootDrawable);
         }
-        if (tvDialogTitle != null) {
-            tvDialogTitle.setTextColor(textPri);
+
+        View explainer = view.findViewById(R.id.card_meetup_explainer);
+        if (explainer != null) {
+            GradientDrawable expBg = new GradientDrawable();
+            expBg.setShape(GradientDrawable.RECTANGLE);
+            expBg.setCornerRadius(12f * getResources().getDisplayMetrics().density);
+            expBg.setColor(boxBg);
+            expBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), borderC);
+            explainer.setBackground(expBg);
         }
-        if (btnDialogClose != null) {
-            btnDialogClose.setColorFilter(textSec);
-            btnDialogClose.setOnClickListener(v -> dialog.dismiss());
+
+        View boxKey = view.findViewById(R.id.box_key_display);
+        if (boxKey != null) {
+            GradientDrawable boxDrawable = new GradientDrawable();
+            boxDrawable.setShape(GradientDrawable.RECTANGLE);
+            boxDrawable.setCornerRadius(12f * getResources().getDisplayMetrics().density);
+            boxDrawable.setColor(boxBg);
+            boxDrawable.setStroke((int) (1f * getResources().getDisplayMetrics().density), borderC);
+            boxKey.setBackground(boxDrawable);
         }
-        View boxKeyDisplay = view.findViewById(R.id.box_key_display);
-        if (boxKeyDisplay != null) {
-            GradientDrawable boxBgDrawable = new GradientDrawable();
-            boxBgDrawable.setColor(boxBg);
-            boxBgDrawable.setCornerRadius(20);
-            boxBgDrawable.setStroke(2, borderC);
-            boxKeyDisplay.setBackground(boxBgDrawable);
-        }
-        if (tvGeneratedKey != null) {
-            tvGeneratedKey.setTextColor(textPri);
-        }
+
         if (etFriendKey != null) {
             GradientDrawable etBgDrawable = new GradientDrawable();
+            etBgDrawable.setShape(GradientDrawable.RECTANGLE);
+            etBgDrawable.setCornerRadius(12f * getResources().getDisplayMetrics().density);
             etBgDrawable.setColor(boxBg);
-            etBgDrawable.setCornerRadius(20);
             etBgDrawable.setStroke(2, borderC);
             etFriendKey.setBackground(etBgDrawable);
             etFriendKey.setTextColor(textPri);
@@ -846,8 +881,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         // Always generate key with quartier (district) blur level
         String key = MeetupKey.encode(baseLat, baseLon, MeetupKey.BLUR_DISTRICT);
+        String inviteLink = "benchmap://meet?k=" + key;
         if (tvGeneratedKey != null) {
-            tvGeneratedKey.setText(key);
+            tvGeneratedKey.setText(inviteLink);
         }
 
         // Clean modern tab switching
@@ -877,19 +913,31 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             layoutTabShare.setVisibility(View.GONE);
             layoutTabJoin.setVisibility(View.VISIBLE);
             updateTabs.run();
+
+            // Auto-detect meetup key or link in clipboard
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                CharSequence clipText = cm.getPrimaryClip().getItemAt(0).getText();
+                if (clipText != null) {
+                    String clipStr = clipText.toString().trim();
+                    if (clipStr.contains("meet?k=") || clipStr.contains("BM1-")) {
+                        etFriendKey.setText(clipStr);
+                        tvKeyError.setVisibility(View.INVISIBLE);
+                        Toast.makeText(this, "Lien d'invitation détecté dans le presse-papier !", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
         });
 
         btnCopyKey.setOnClickListener(v -> {
             triggerHapticTick();
-            String k = tvGeneratedKey.getText().toString();
-            copyToClipboard("BenchMap Meetup Key", k);
-            Toast.makeText(this, "Clé copiée dans le presse-papier !", Toast.LENGTH_SHORT).show();
+            copyToClipboard("BenchMap Rendez-vous", inviteLink);
+            Toast.makeText(this, "Lien d'invitation copié !", Toast.LENGTH_SHORT).show();
         });
 
         btnShareInvite.setOnClickListener(v -> {
             triggerHapticTick();
-            String k = tvGeneratedKey.getText().toString();
-            String text = MeetupKey.formatShareText(k, baseName);
+            String text = MeetupKey.formatShareText(key, baseName);
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
             sendIntent.putExtra(Intent.EXTRA_TEXT, text);
             sendIntent.setType("text/plain");
@@ -1866,7 +1914,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             collectionManager.saveBenchWithCollections(updated, selectedColIds);
             dialog.dismiss();
             updateDetailCardSavedState(bench);
-            Toast.makeText(MainActivity.this, "Banc enregistré dans vos listes !", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Banc ajouté à votre liste !", Toast.LENGTH_SHORT).show();
         });
 
         dialog.show();
