@@ -47,6 +47,13 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.Window;
 import android.widget.EditText;
 
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
@@ -70,7 +77,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
     // Header Swiss elements
     private MaterialCardView cardHeader;
-    private TextView tvAppTitle, tvAppSubtitle;
+    private TextView tvAppTitle;
     private ImageView btnThemeToggle;
     private ImageView btnMeetup;
     private boolean isDarkMode = false;
@@ -87,12 +94,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private int friendBlurMeters = 0;
     private final List<MeetupFinder.MeetupBench> currentHalfwayBenches = new ArrayList<>();
     private int currentMeetupBenchIndex = 0;
-    private int selectedBlurRadius = MeetupKey.BLUR_EXACT;
+    private int selectedBlurRadius = MeetupKey.BLUR_DISTRICT;
 
-    // Floating Action Controls
+    // Controls
     private FloatingActionButton fabMyLocation;
-    private MaterialButton btnNearest;
+    private MaterialButton btnSearch;
     private MaterialButton btnRandom;
+    private MaterialButton btnNearest;
 
     // Detail Card
     private MaterialCardView cardDetail;
@@ -137,6 +145,11 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         WindowCompat.setDecorFitsSystemWindows(window, false);
         window.setStatusBarColor(Color.TRANSPARENT);
         window.setNavigationBarColor(Color.TRANSPARENT);
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
 
         setContentView(R.layout.activity_main);
 
@@ -169,7 +182,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         layoutHeader = findViewById(R.id.layout_header);
         cardHeader = findViewById(R.id.card_header);
         tvAppTitle = findViewById(R.id.tv_app_title);
-        tvAppSubtitle = findViewById(R.id.tv_app_subtitle);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
@@ -182,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         btnMeetupClose = findViewById(R.id.btn_meetup_close);
 
         fabMyLocation = findViewById(R.id.fab_my_location);
+        btnSearch = findViewById(R.id.btn_search);
         btnNearest = findViewById(R.id.btn_nearest);
         btnRandom = findViewById(R.id.btn_random);
 
@@ -204,26 +217,22 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             Insets statusInsets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
             Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
 
-            float d = getResources().getDisplayMetrics().density;
             if (layoutHeader != null) {
-                layoutHeader.setPadding(
-                        layoutHeader.getPaddingLeft(),
-                        statusInsets.top + (int) (8 * d),
-                        layoutHeader.getPaddingRight(),
-                        layoutHeader.getPaddingBottom()
-                );
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) layoutHeader.getLayoutParams();
+                lp.topMargin = statusInsets.top + (int) (12 * getResources().getDisplayMetrics().density);
+                layoutHeader.setLayoutParams(lp);
             }
 
-            if (cardDetail != null && cardDetail.getLayoutParams() instanceof FrameLayout.LayoutParams) {
-                FrameLayout.LayoutParams cardLp = (FrameLayout.LayoutParams) cardDetail.getLayoutParams();
-                cardLp.bottomMargin = navInsets.bottom + (int) (14 * d);
-                cardDetail.setLayoutParams(cardLp);
+            if (layoutBottomControls != null) {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) layoutBottomControls.getLayoutParams();
+                lp.bottomMargin = navInsets.bottom + (int) (20 * getResources().getDisplayMetrics().density);
+                layoutBottomControls.setLayoutParams(lp);
             }
 
-            if (layoutBottomControls != null && layoutBottomControls.getLayoutParams() instanceof FrameLayout.LayoutParams) {
-                FrameLayout.LayoutParams btnLp = (FrameLayout.LayoutParams) layoutBottomControls.getLayoutParams();
-                btnLp.bottomMargin = navInsets.bottom + (int) (20 * d);
-                layoutBottomControls.setLayoutParams(btnLp);
+            if (cardDetail != null) {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) cardDetail.getLayoutParams();
+                lp.bottomMargin = navInsets.bottom + (int) (16 * getResources().getDisplayMetrics().density);
+                cardDetail.setLayoutParams(lp);
             }
 
             return windowInsets;
@@ -231,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     }
 
     private void initTheme() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         boolean defaultDark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         boolean initialDark = prefs.getBoolean(PREF_DARK_MODE, defaultDark);
         applyTheme(initialDark);
@@ -257,9 +266,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (tvAppTitle != null) {
             tvAppTitle.setTextColor(textPrimary);
-        }
-        if (tvAppSubtitle != null) {
-            tvAppSubtitle.setTextColor(textMuted);
         }
         if (tvBenchCounter != null) {
             GradientDrawable counterDrawable = new GradientDrawable();
@@ -299,6 +305,11 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (fabMyLocation != null) {
             fabMyLocation.setBackgroundTintList(ColorStateList.valueOf(bgCard));
             fabMyLocation.setImageTintList(ColorStateList.valueOf(textPrimary));
+        }
+        if (btnSearch != null) {
+            btnSearch.setBackgroundColor(bgCard);
+            btnSearch.setTextColor(textPrimary);
+            btnSearch.setStrokeColor(ColorStateList.valueOf(borderCard));
         }
         if (btnRandom != null) {
             btnRandom.setBackgroundColor(bgCard);
@@ -421,6 +432,11 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 checkLocationPermission();
                 Toast.makeText(this, "Recherche du signal GPS...", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        btnSearch.setOnClickListener(v -> {
+            triggerHapticTick();
+            showSearchDialog();
         });
 
         btnNearest.setOnClickListener(v -> {
@@ -658,10 +674,6 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         View layoutTabShare = view.findViewById(R.id.layout_tab_share);
         View layoutTabJoin = view.findViewById(R.id.layout_tab_join);
 
-        TextView chipExact = view.findViewById(R.id.chip_blur_exact);
-        TextView chipDiscreet = view.findViewById(R.id.chip_blur_discreet);
-        TextView chipDistrict = view.findViewById(R.id.chip_blur_district);
-
         TextView tvGeneratedKey = view.findViewById(R.id.tv_generated_key);
         MaterialButton btnCopyKey = view.findViewById(R.id.btn_copy_key);
         MaterialButton btnShareInvite = view.findViewById(R.id.btn_share_invite);
@@ -697,6 +709,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (btnDialogClose != null) {
             btnDialogClose.setColorFilter(textSec);
+            btnDialogClose.setOnClickListener(v -> dialog.dismiss());
         }
         View boxKeyDisplay = view.findViewById(R.id.box_key_display);
         if (boxKeyDisplay != null) {
@@ -725,74 +738,52 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             }
         });
 
-        final int[] blurSetting = new int[]{selectedBlurRadius};
-
-        Runnable updateKeyDisplay = () -> {
-            String key = MeetupKey.encode(baseLat, baseLon, blurSetting[0]);
+        // Always generate key with quartier (district) blur level
+        String key = MeetupKey.encode(baseLat, baseLon, MeetupKey.BLUR_DISTRICT);
+        if (tvGeneratedKey != null) {
             tvGeneratedKey.setText(key);
+        }
+
+        // Clean modern tab switching
+        Runnable updateTabs = () -> {
+            boolean isShare = layoutTabShare.getVisibility() == View.VISIBLE;
+            tabBtnShare.setBackgroundColor(isShare ? Color.parseColor("#E52B35") : boxBg);
+            tabBtnShare.setTextColor(isShare ? Color.WHITE : textPri);
+            tabBtnShare.setStrokeColor(ColorStateList.valueOf(isShare ? Color.parseColor("#E52B35") : borderC));
+            tabBtnShare.setStrokeWidth(isShare ? 0 : 2);
+
+            tabBtnJoin.setBackgroundColor(!isShare ? Color.parseColor("#E52B35") : boxBg);
+            tabBtnJoin.setTextColor(!isShare ? Color.WHITE : textPri);
+            tabBtnJoin.setStrokeColor(ColorStateList.valueOf(!isShare ? Color.parseColor("#E52B35") : borderC));
+            tabBtnJoin.setStrokeWidth(!isShare ? 0 : 2);
         };
-
-        Runnable updateBlurChips = () -> {
-            chipExact.setAlpha(blurSetting[0] == MeetupKey.BLUR_EXACT ? 1.0f : 0.45f);
-            chipDiscreet.setAlpha(blurSetting[0] == MeetupKey.BLUR_DISCREET ? 1.0f : 0.45f);
-            chipDistrict.setAlpha(blurSetting[0] == MeetupKey.BLUR_DISTRICT ? 1.0f : 0.45f);
-            updateKeyDisplay.run();
-        };
-
-        updateBlurChips.run();
-
-        chipExact.setOnClickListener(v -> {
-            triggerHapticTick();
-            blurSetting[0] = MeetupKey.BLUR_EXACT;
-            selectedBlurRadius = MeetupKey.BLUR_EXACT;
-            updateBlurChips.run();
-        });
-
-        chipDiscreet.setOnClickListener(v -> {
-            triggerHapticTick();
-            blurSetting[0] = MeetupKey.BLUR_DISCREET;
-            selectedBlurRadius = MeetupKey.BLUR_DISCREET;
-            updateBlurChips.run();
-        });
-
-        chipDistrict.setOnClickListener(v -> {
-            triggerHapticTick();
-            blurSetting[0] = MeetupKey.BLUR_DISTRICT;
-            selectedBlurRadius = MeetupKey.BLUR_DISTRICT;
-            updateBlurChips.run();
-        });
+        updateTabs.run();
 
         tabBtnShare.setOnClickListener(v -> {
             triggerHapticTick();
             layoutTabShare.setVisibility(View.VISIBLE);
             layoutTabJoin.setVisibility(View.GONE);
-            tabBtnShare.setAlpha(1.0f);
-            tabBtnJoin.setAlpha(0.6f);
+            updateTabs.run();
         });
 
         tabBtnJoin.setOnClickListener(v -> {
             triggerHapticTick();
             layoutTabShare.setVisibility(View.GONE);
             layoutTabJoin.setVisibility(View.VISIBLE);
-            tabBtnShare.setAlpha(0.6f);
-            tabBtnJoin.setAlpha(1.0f);
+            updateTabs.run();
         });
-
-        if (btnDialogClose != null) {
-            btnDialogClose.setOnClickListener(v -> dialog.dismiss());
-        }
 
         btnCopyKey.setOnClickListener(v -> {
             triggerHapticTick();
-            String key = tvGeneratedKey.getText().toString();
-            copyToClipboard("BenchMap Meetup Key", key);
+            String k = tvGeneratedKey.getText().toString();
+            copyToClipboard("BenchMap Meetup Key", k);
             Toast.makeText(this, "Clé copiée dans le presse-papier !", Toast.LENGTH_SHORT).show();
         });
 
         btnShareInvite.setOnClickListener(v -> {
             triggerHapticTick();
-            String key = tvGeneratedKey.getText().toString();
-            String text = MeetupKey.formatShareText(key, baseName);
+            String k = tvGeneratedKey.getText().toString();
+            String text = MeetupKey.formatShareText(k, baseName);
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
             sendIntent.putExtra(Intent.EXTRA_TEXT, text);
             sendIntent.setType("text/plain");
@@ -828,6 +819,239 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         });
 
         dialog.show();
+    }
+
+    private void showSearchDialog() {
+        BottomSheetDialog searchDialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_search, null);
+        searchDialog.setContentView(view);
+
+        int bgDialog = isDarkMode ? Color.parseColor("#181A20") : Color.parseColor("#FFFFFF");
+        int textPri = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int textSec = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#262932") : Color.parseColor("#E4E7EC");
+        int boxBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+
+        View root = view.findViewById(R.id.dialog_search_root);
+        if (root != null) {
+            GradientDrawable dialogBgDrawable = new GradientDrawable();
+            dialogBgDrawable.setColor(bgDialog);
+            dialogBgDrawable.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+            root.setBackground(dialogBgDrawable);
+        }
+
+        View dragHandle = view.findViewById(R.id.search_drag_handle);
+        if (dragHandle != null) {
+            GradientDrawable handleBg = new GradientDrawable();
+            handleBg.setColor(borderC);
+            handleBg.setCornerRadius(10);
+            dragHandle.setBackground(handleBg);
+        }
+
+        View searchBarBox = view.findViewById(R.id.search_bar_box);
+        if (searchBarBox != null) {
+            GradientDrawable boxBgDrawable = new GradientDrawable();
+            boxBgDrawable.setColor(boxBg);
+            boxBgDrawable.setCornerRadius(22);
+            boxBgDrawable.setStroke(2, borderC);
+            searchBarBox.setBackground(boxBgDrawable);
+        }
+
+        EditText etSearchQuery = view.findViewById(R.id.et_search_query);
+        ImageView btnSearchClear = view.findViewById(R.id.btn_search_clear);
+        TextView btnSearchClose = view.findViewById(R.id.btn_search_close);
+        TextView tvSearchStatus = view.findViewById(R.id.tv_search_status);
+        ListView listSearchResults = view.findViewById(R.id.list_search_results);
+        TextView tvSearchEmpty = view.findViewById(R.id.tv_search_empty);
+
+        if (etSearchQuery != null) {
+            etSearchQuery.setTextColor(textPri);
+            etSearchQuery.setHintTextColor(textSec);
+        }
+        if (btnSearchClear != null) btnSearchClear.setColorFilter(textSec);
+        if (btnSearchClose != null) {
+            btnSearchClose.setTextColor(textSec);
+            btnSearchClose.setOnClickListener(v -> {
+                triggerHapticTick();
+                searchDialog.dismiss();
+            });
+        }
+        if (tvSearchStatus != null) tvSearchStatus.setTextColor(textSec);
+        if (tvSearchEmpty != null) tvSearchEmpty.setTextColor(textSec);
+
+        if (searchDialog.getWindow() != null) {
+            searchDialog.getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            );
+        }
+
+        searchDialog.setOnShowListener(d -> {
+            BottomSheetDialog dialog = (BottomSheetDialog) d;
+            FrameLayout bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                bottomSheet.setBackgroundColor(Color.TRANSPARENT);
+                BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottomSheet);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+                ViewGroup.LayoutParams lp = bottomSheet.getLayoutParams();
+                if (lp != null) {
+                    lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                    bottomSheet.setLayoutParams(lp);
+                }
+            }
+        });
+
+        List<Bench> allBenches = benchMapView.getAllBenches();
+        final List<Bench> filteredList = new ArrayList<>();
+
+        BaseAdapter adapter = new BaseAdapter() {
+            @Override
+            public int getCount() {
+                return filteredList.size();
+            }
+
+            @Override
+            public Bench getItem(int position) {
+                return filteredList.get(position);
+            }
+
+            @Override
+            public long getItemId(int position) {
+                return position;
+            }
+
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = getLayoutInflater().inflate(R.layout.item_search_bench, parent, false);
+                }
+                Bench bench = getItem(position);
+                TextView tvIcon = convertView.findViewById(R.id.tv_item_icon);
+                TextView tvTitle = convertView.findViewById(R.id.tv_item_title);
+                TextView tvSubtitle = convertView.findViewById(R.id.tv_item_subtitle);
+                TextView tvDistance = convertView.findViewById(R.id.tv_item_distance);
+
+                tvTitle.setText(bench.getDisplayName());
+                tvTitle.setTextColor(textPri);
+                tvSubtitle.setText(bench.getDisplaySubtitle());
+                tvSubtitle.setTextColor(textSec);
+                tvIcon.setText(bench.isInPark() ? "🌳" : "🪑");
+
+                if (lastLocation != null) {
+                    double distMeters = MontrealBenchMapView.computeDistance(
+                            lastLocation.getLatitude(), lastLocation.getLongitude(), bench.lat, bench.lon);
+                    tvDistance.setVisibility(View.VISIBLE);
+                    if (distMeters < 1000) {
+                        tvDistance.setText(String.format(Locale.FRENCH, "%d m", (int) distMeters));
+                    } else {
+                        tvDistance.setText(String.format(Locale.FRENCH, "%.1f km", distMeters / 1000.0));
+                    }
+                    tvDistance.setTextColor(Color.parseColor("#E52B35"));
+                } else {
+                    tvDistance.setVisibility(View.GONE);
+                }
+
+                convertView.setOnClickListener(v -> {
+                    triggerHapticTick();
+                    searchDialog.dismiss();
+                    benchMapView.focusBench(bench);
+                });
+
+                return convertView;
+            }
+        };
+        listSearchResults.setAdapter(adapter);
+
+        Runnable performFilter = () -> {
+            String rawQuery = (etSearchQuery != null && etSearchQuery.getText() != null)
+                    ? etSearchQuery.getText().toString().trim() : "";
+
+            btnSearchClear.setVisibility(rawQuery.isEmpty() ? View.GONE : View.VISIBLE);
+            filteredList.clear();
+
+            if (rawQuery.isEmpty()) {
+                // Curated top highlights across Montreal
+                String[] topLocations = new String[]{
+                    "Mont-Royal", "La Fontaine", "Sainte-Catherine", "Saint-Laurent",
+                    "Wellington", "Jarry", "Saint-Denis", "Notre-Dame", "Laurier", "Maisonneuve"
+                };
+                for (String loc : topLocations) {
+                    for (Bench b : allBenches) {
+                        if (b.getDisplayName().toLowerCase(Locale.ROOT).contains(loc.toLowerCase(Locale.ROOT)) ||
+                            b.street.toLowerCase(Locale.ROOT).contains(loc.toLowerCase(Locale.ROOT))) {
+                            filteredList.add(b);
+                            break;
+                        }
+                    }
+                }
+                tvSearchStatus.setText("SUGGESTIONS (" + filteredList.size() + ")");
+            } else {
+                String normalizedQuery = normalizeForSearch(rawQuery);
+                String[] tokens = normalizedQuery.split("\\s+");
+                int limit = 60;
+                for (Bench b : allBenches) {
+                    String searchable = normalizeForSearch(
+                        b.street + " " + b.park + " " + b.borough + " " + b.getAddress() + " " + b.material + " " + b.backrest
+                    );
+                    boolean allMatch = true;
+                    for (String token : tokens) {
+                        if (!token.isEmpty() && !searchable.contains(token)) {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+                    if (allMatch) {
+                        filteredList.add(b);
+                        if (filteredList.size() >= limit) break;
+                    }
+                }
+                tvSearchStatus.setText(filteredList.size() + " RÉSULTAT" + (filteredList.size() > 1 ? "S" : ""));
+            }
+
+            boolean hasResults = !filteredList.isEmpty();
+            listSearchResults.setVisibility(hasResults ? View.VISIBLE : View.GONE);
+            tvSearchEmpty.setVisibility(hasResults ? View.GONE : View.VISIBLE);
+            adapter.notifyDataSetChanged();
+        };
+
+        performFilter.run();
+
+        btnSearchClear.setOnClickListener(v -> {
+            triggerHapticTick();
+            etSearchQuery.setText("");
+            performFilter.run();
+        });
+
+        etSearchQuery.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                performFilter.run();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        searchDialog.show();
+        if (etSearchQuery != null) {
+            etSearchQuery.post(() -> {
+                etSearchQuery.requestFocus();
+                android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.showSoftInput(etSearchQuery, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                }
+            });
+        }
+    }
+
+    private static String normalizeForSearch(String str) {
+        if (str == null) return "";
+        String nfd = java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT).replace('-', ' ');
     }
 
     public boolean applyFriendKey(String key) {

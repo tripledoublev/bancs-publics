@@ -855,6 +855,18 @@ public class MontrealBenchMapView extends View {
         invalidate();
     }
 
+    public void focusBench(Bench bench) {
+        if (bench == null) return;
+        this.selectedBench = bench;
+        animateToMerc(bench.mercX, bench.mercY, 2200000f);
+        double dist = (userLocation != null) ?
+                computeDistance(userLocation.getLatitude(), userLocation.getLongitude(), bench.lat, bench.lon) : 0;
+        if (mapListener != null) {
+            mapListener.onBenchSelected(bench, dist);
+        }
+        invalidate();
+    }
+
     public void deselectBench() {
         this.selectedBench = null;
         if (mapListener != null) {

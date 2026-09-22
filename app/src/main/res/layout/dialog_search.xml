@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dialog_search_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="16dp"
+    android:background="@drawable/bg_circle_button">
+
+    <!-- Top Drag Handle -->
+    <View
+        android:id="@+id/search_drag_handle"
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_chip_counter" />
+
+    <!-- Search Input Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:id="@+id/search_bar_box"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="6dp"
+            android:background="@drawable/bg_chip_counter">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔍"
+                android:textSize="15sp"
+                android:layout_marginEnd="8dp" />
+
+            <EditText
+                android:id="@+id/et_search_query"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Rue, parc, adresse, quartier..."
+                android:inputType="text|textCapWords|textNoSuggestions"
+                android:imeOptions="actionSearch"
+                android:maxLines="1"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_muted" />
+
+            <ImageView
+                android:id="@+id/btn_search_clear"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:contentDescription="Effacer"
+                android:visibility="gone"
+                app:tint="@color/text_muted" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_search_close"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="4dp"
+            android:text="Annuler"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02"
+            android:textColor="@color/text_muted"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <!-- Quick Status / Result Count Badge -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tv_search_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EXPLORER MONTRÉAL"
+            android:textSize="10sp"
+            android:letterSpacing="0.06"
+            android:textStyle="bold"
+            android:textColor="@color/text_muted" />
+    </LinearLayout>
+
+    <!-- Results List (takes remaining space above keyboard) -->
+    <ListView
+        android:id="@+id/list_search_results"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:nestedScrollingEnabled="true"
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:scrollbars="vertical" />
+
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/tv_search_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Aucun banc trouvé à cette adresse"
+        android:textSize="13sp"
+        android:textColor="@color/text_muted"
+        android:visibility="gone" />
+
+</LinearLayout>

@@ -43,13 +43,12 @@
             app:tint="@color/text_muted" />
     </LinearLayout>
 
-    <!-- Segmented Tab Switcher -->
+    <!-- Tab Switcher -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="42dp"
+        android:layout_height="44dp"
         android:layout_marginTop="16dp"
-        android:orientation="horizontal"
-        android:background="@drawable/bg_chip_counter">
+        android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/tab_btn_share"
@@ -60,8 +59,9 @@
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.04"
-            app:cornerRadius="8dp"
-            app:elevation="0dp" />
+            app:cornerRadius="12dp"
+            app:elevation="0dp"
+            android:layout_marginEnd="6dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/tab_btn_join"
@@ -72,8 +72,9 @@
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.04"
-            app:cornerRadius="8dp"
-            app:elevation="0dp" />
+            app:cornerRadius="12dp"
+            app:elevation="0dp"
+            android:layout_marginStart="6dp" />
     </LinearLayout>
 
     <!-- ================= TAB 1: GENERATE / SHARE KEY ================= -->
@@ -83,64 +84,6 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginTop="14dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="CONFIDENTIALITÉ DU LIEU :"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            android:textColor="@color/text_muted" />
-
-        <!-- Privacy Blur Selector Chips -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp">
-
-            <TextView
-                android:id="@+id/chip_blur_exact"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="🎯 Précis"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_chip_attribute"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginEnd="4dp" />
-
-            <TextView
-                android:id="@+id/chip_blur_discreet"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1.2"
-                android:gravity="center"
-                android:text="🔒 Flou ~150 m"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_chip_attribute"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginEnd="4dp" />
-
-            <TextView
-                android:id="@+id/chip_blur_district"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1.2"
-                android:gravity="center"
-                android:text="🏘 Quartier"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:background="@drawable/bg_chip_attribute"
-                android:clickable="true"
-                android:focusable="true" />
-        </LinearLayout>
 
         <!-- Monospace Key Display Box -->
         <LinearLayout
