@@ -43,15 +43,15 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - Rayon de sélection précis (20 dp) éliminant tout déclenchement intempestif lors du déplacement de la carte.
   - Double-tap zoom instantané sur le point d'impact.
 - **🎨 8 Styles Cartographiques & Rotation Quotidienne**:
-  - Un style graphique différent chaque jour de la semaine ou sélection manuelle :
-    - *Clean Minimal* (Standard épuré)
-    - *Architectural Hairline* (Lignes fines de dessin technique)
-    - *Bauhaus Gras* (Postérisation graphique affirmée)
-    - *Cadastre Tireté* (Lignes pointillées cadastre)
-    - *Double Casing* (Boulevards et avenues à double tracé)
-    - *Tracé Artistique* (Esquisse organique et traits vivants)
-    - *Matrice Pointillée* (Texture pointilliste)
-    - *Noir Argentique* (Monochrome contrasté)
+  - Un style graphique distinct chaque jour de la semaine ou sélection manuelle :
+    - *Standard Épuré* (Minimalisme élégant, lisibilité maximale)
+    - *Tracé d'architecte* (Lignes ultra-fines techniques, précision d'épure)
+    - *Bauhaus Graphique* (Lignes extra-épaisses, affiches géométriques et pavés carrés)
+    - *Cadastre Tireté* (Lignes en tirets d'arpenteur, contours pointillés)
+    - *Boulevards Doubles* (Grands axes à double contour classique)
+    - *Atelier Pinceau* (Traits organiques, gravure et esquisse à l'encre)
+    - *Matrice Ponctuelle* (Réseau et parcelles en stipple pointilliste)
+    - *Noir & Blanc Argentique* (Monochromie pure, ambiance cinéma & sels d'argent avec bancs carmin)
 - **👆 Gestuelle Fluide & Épingles Stabilisées**:
   - **Rotation libre à 2 doigts** : Orientation libre avec retour haptique d'aimantation au Nord (snap 3.5°).
   - **Épingles verticales stabilisées** : Les épingles de position contre-pivotent automatiquement pour rester toujours droites face à l'utilisateur.

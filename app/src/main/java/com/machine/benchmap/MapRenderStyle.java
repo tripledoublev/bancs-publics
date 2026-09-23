@@ -5,7 +5,7 @@ import java.util.Calendar;
 /**
  * MapRenderStyle - Différents styles artistiques et cartographiques pour BenchMap.
  * Permet d'explorer Montréal sous un nouvel angle chaque jour :
- * - Minimaliste Suisse
+ * - Standard Épuré
  * - Tracé d'architecte (Thin)
  * - Bauhaus Graphique (Bold / Thick)
  * - Cadastre Tireté (Dashed)
@@ -17,7 +17,7 @@ import java.util.Calendar;
 public enum MapRenderStyle {
     SWISS_CLEAN(
             "swiss_clean",
-            "Minimaliste Suisse",
+            "Standard Épuré",
             "Élégant, équilibré, lisibilité maximale",
             "🎨"
     ),
