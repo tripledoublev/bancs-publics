@@ -232,6 +232,104 @@ public class MontrealBenchMapView extends View {
         }
     }
 
+    /**
+     * High-speed 2D uniform grid for culling and drawing park polygons.
+     * Prevents duplicate rendering across cell boundaries via frame IDs.
+     */
+    public static class SpatialPolygonGrid {
+        private final int rows;
+        private final int cols;
+        private final float minX, maxX, minY, maxY;
+        private final float cellW, cellH;
+        private final List<GeometryLayer>[][] cells;
+        private int currentFrame = 1;
+
+        @SuppressWarnings("unchecked")
+        public SpatialPolygonGrid(List<GeometryLayer> layers, int rows, int cols,
+                                  float minX, float maxX, float minY, float maxY) {
+            this.rows = rows;
+            this.cols = cols;
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.cellW = (maxX - minX) / cols;
+            this.cellH = (maxY - minY) / rows;
+            this.cells = new ArrayList[rows][cols];
+            for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                    cells[r][c] = new ArrayList<>();
+                }
+            }
+
+            for (int i = 0; i < layers.size(); i++) {
+                GeometryLayer layer = layers.get(i);
+                int c0 = Math.max(0, Math.min(cols - 1, (int) ((layer.minX - minX) / cellW)));
+                int c1 = Math.max(0, Math.min(cols - 1, (int) ((layer.maxX - minX) / cellW)));
+                int r0 = Math.max(0, Math.min(rows - 1, (int) ((layer.minY - minY) / cellH)));
+                int r1 = Math.max(0, Math.min(rows - 1, (int) ((layer.maxY - minY) / cellH)));
+
+                for (int r = r0; r <= r1; r++) {
+                    for (int c = c0; c <= c1; c++) {
+                        cells[r][c].add(layer);
+                    }
+                }
+            }
+        }
+
+        public void drawVisible(Canvas canvas, Path path, Paint paintFill, Paint paintBorder,
+                                double viewMinX, double viewMaxX, double viewMinY, double viewMaxY,
+                                float halfW, float halfH, double cX, double cY, float sc,
+                                boolean drawBorder) {
+            int frame = ++currentFrame;
+            if (frame <= 0) {
+                currentFrame = 1;
+                frame = 1;
+            }
+
+            int c0 = Math.max(0, Math.min(cols - 1, (int) ((viewMinX - minX) / cellW)));
+            int c1 = Math.max(0, Math.min(cols - 1, (int) ((viewMaxX - minX) / cellW)));
+            int r0 = Math.max(0, Math.min(rows - 1, (int) ((viewMinY - minY) / cellH)));
+            int r1 = Math.max(0, Math.min(rows - 1, (int) ((viewMinY - minY) / cellH)));
+
+            for (int r = r0; r <= r1; r++) {
+                for (int c = c0; c <= c1; c++) {
+                    List<GeometryLayer> cellList = cells[r][c];
+                    int sz = cellList.size();
+                    for (int i = 0; i < sz; i++) {
+                        GeometryLayer poly = cellList.get(i);
+                        if (poly.frameId == frame) {
+                            continue;
+                        }
+                        poly.frameId = frame;
+
+                        if (poly.maxX < viewMinX || poly.minX > viewMaxX ||
+                                poly.maxY < viewMinY || poly.minY > viewMaxY) {
+                            continue;
+                        }
+
+                        // Sub-pixel culling: skip micro-polygons smaller than 1 screen pixel
+                        if ((poly.maxX - poly.minX) * sc < 1.0f && (poly.maxY - poly.minY) * sc < 1.0f) {
+                            continue;
+                        }
+
+                        path.reset();
+                        float[] coords = poly.coords;
+                        path.moveTo(halfW + (float) ((coords[0] - cX) * sc), halfH - (float) ((coords[1] - cY) * sc));
+                        for (int j = 2; j < coords.length; j += 2) {
+                            path.lineTo(halfW + (float) ((coords[j] - cX) * sc), halfH - (float) ((coords[j + 1] - cY) * sc));
+                        }
+                        path.close();
+                        canvas.drawPath(path, paintFill);
+                        if (drawBorder) {
+                            canvas.drawPath(path, paintBorder);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Colors - Refined Architectural Swiss Palette (Light)
     private static final int LIGHT_WATER = Color.parseColor("#E6ECF1");         // Crisp architectural Nordic water
     private static final int LIGHT_LAND = Color.parseColor("#F5F5F7");          // Pure clean landmass / paper
@@ -417,6 +515,20 @@ public class MontrealBenchMapView extends View {
 
     private SpatialStreetGrid majorGrid = null;
     private SpatialStreetGrid minorGrid = null;
+    private SpatialPolygonGrid parkGrid = null;
+
+    // Direct GPU batching vertex buffers for 9,602 benches (zero GC allocations during rendering)
+    private final float[] benchStreetPts = new float[20000];
+    private final float[] benchParkPts = new float[20000];
+    private final int[] benchCounts = new int[2];
+
+    // Reusable geometry paths and rects for zero GC allocations during onDraw()
+    private final RectF pinShadowRect = new RectF();
+    private final RectF compassShadowRect = new RectF();
+    private final Path selectedDiamondOuterPath = new Path();
+    private final Path selectedDiamondGapPath = new Path();
+    private final Path selectedDiamondCorePath = new Path();
+
     private final List<Bench> visibleBenches = new ArrayList<>(2048);
 
     // State
@@ -484,10 +596,13 @@ public class MontrealBenchMapView extends View {
         effectDottedShoreline = new DashPathEffect(new float[]{2.5f * density, 5.5f * density}, 0);
         effectDottedPark = new DashPathEffect(new float[]{2.0f * density, 5.0f * density}, 0);
 
-        // Benches
-        paintBenchStreet.setStyle(Paint.Style.FILL);
-        paintBenchPark.setStyle(Paint.Style.FILL);
-        paintBenchHalo.setStyle(Paint.Style.FILL);
+        // Benches (Direct GPU batch points rendering)
+        paintBenchStreet.setStyle(Paint.Style.STROKE);
+        paintBenchStreet.setStrokeCap(Paint.Cap.ROUND);
+        paintBenchPark.setStyle(Paint.Style.STROKE);
+        paintBenchPark.setStrokeCap(Paint.Cap.ROUND);
+        paintBenchHalo.setStyle(Paint.Style.STROKE);
+        paintBenchHalo.setStrokeCap(Paint.Cap.ROUND);
 
         // Selected Bench Rings
         paintBenchSelected.setStyle(Paint.Style.STROKE);
@@ -1277,6 +1392,7 @@ public class MontrealBenchMapView extends View {
                 SpatialBenchIndex newIndex = new SpatialBenchIndex(loadedBenches);
                 SpatialStreetGrid loadedMajorGrid = new SpatialStreetGrid(loadedMajor, 12, 12, GRID_MIN_X, GRID_MAX_X, GRID_MIN_Y, GRID_MAX_Y);
                 SpatialStreetGrid loadedMinorGrid = new SpatialStreetGrid(loadedMinor, 16, 16, GRID_MIN_X, GRID_MAX_X, GRID_MIN_Y, GRID_MAX_Y);
+                SpatialPolygonGrid loadedParkGrid = new SpatialPolygonGrid(loadedParks, 16, 16, GRID_MIN_X, GRID_MAX_X, GRID_MIN_Y, GRID_MAX_Y);
 
                 synchronized (dataLock) {
                     islandPolys.clear();
@@ -1292,6 +1408,7 @@ public class MontrealBenchMapView extends View {
                     spatialIndex = newIndex;
                     majorGrid = loadedMajorGrid;
                     minorGrid = loadedMinorGrid;
+                    parkGrid = loadedParkGrid;
                     isMapReady = true;
                 }
 
@@ -1662,22 +1779,30 @@ public class MontrealBenchMapView extends View {
                 canvas.drawPath(pathPoly, paintShoreline);
             }
 
-            // 3. Parks & Green Spaces
-            for (int i = 0; i < parkPolys.size(); i++) {
-                GeometryLayer poly = parkPolys.get(i);
-                if (poly.maxX < viewMinX || poly.minX > viewMaxX || poly.maxY < viewMinY || poly.minY > viewMaxY) {
-                    continue;
-                }
-                pathPoly.reset();
-                float[] c = poly.coords;
-                pathPoly.moveTo(halfW + (float) ((c[0] - cX) * sc), halfH - (float) ((c[1] - cY) * sc));
-                for (int j = 2; j < c.length; j += 2) {
-                    pathPoly.lineTo(halfW + (float) ((c[j] - cX) * sc), halfH - (float) ((c[j + 1] - cY) * sc));
-                }
-                pathPoly.close();
-                canvas.drawPath(pathPoly, paintPark);
-                if (sc > 220000f) {
-                    canvas.drawPath(pathPoly, paintParkBorder);
+            // 3. Parks & Green Spaces (Spatial grid + Sub-pixel rejection)
+            if (parkGrid != null) {
+                parkGrid.drawVisible(canvas, pathPoly, paintPark, paintParkBorder,
+                        viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, sc > 220000f);
+            } else {
+                for (int i = 0; i < parkPolys.size(); i++) {
+                    GeometryLayer poly = parkPolys.get(i);
+                    if (poly.maxX < viewMinX || poly.minX > viewMaxX || poly.maxY < viewMinY || poly.minY > viewMaxY) {
+                        continue;
+                    }
+                    if ((poly.maxX - poly.minX) * sc < 1.0f && (poly.maxY - poly.minY) * sc < 1.0f) {
+                        continue;
+                    }
+                    pathPoly.reset();
+                    float[] c = poly.coords;
+                    pathPoly.moveTo(halfW + (float) ((c[0] - cX) * sc), halfH - (float) ((c[1] - cY) * sc));
+                    for (int j = 2; j < c.length; j += 2) {
+                        pathPoly.lineTo(halfW + (float) ((c[j] - cX) * sc), halfH - (float) ((c[j + 1] - cY) * sc));
+                    }
+                    pathPoly.close();
+                    canvas.drawPath(pathPoly, paintPark);
+                    if (sc > 220000f) {
+                        canvas.drawPath(pathPoly, paintParkBorder);
+                    }
                 }
             }
 
@@ -1794,32 +1919,40 @@ public class MontrealBenchMapView extends View {
                 benchRadius = benchRadius * 1.15f;
             }
 
-            visibleBenches.clear();
             if (spatialIndex != null) {
-                double viewMinLon = Math.toDegrees(viewMinX);
-                double viewMaxLon = Math.toDegrees(viewMaxX);
-                double viewMinLat = Math.toDegrees(2.0 * Math.atan(Math.exp(viewMinY)) - Math.PI / 2.0);
-                double viewMaxLat = Math.toDegrees(2.0 * Math.atan(Math.exp(viewMaxY)) - Math.PI / 2.0);
+                spatialIndex.queryVisiblePoints(viewMinX, viewMaxX, viewMinY, viewMaxY, step,
+                        halfW, halfH, cX, cY, sc, benchParkPts, benchStreetPts, benchCounts);
+                int parkCount = benchCounts[0];
+                int streetCount = benchCounts[1];
 
-                spatialIndex.queryVisibleBenches(viewMinLat, viewMinLon, viewMaxLat, viewMaxLon, step, visibleBenches);
-                int numBenches = visibleBenches.size();
-                for (int i = 0; i < numBenches; i++) {
-                    Bench b = visibleBenches.get(i);
-                    float bx = halfW + (float) ((b.mercX - cX) * sc);
-                    float by = halfH - (float) ((b.mercY - cY) * sc);
-                    if (isBauhaus) {
-                        if (drawHalo) {
-                            canvas.drawRect(bx - benchRadius - 1.2f * density, by - benchRadius - 1.2f * density,
-                                    bx + benchRadius + 1.2f * density, by + benchRadius + 1.2f * density, paintBenchHalo);
-                        }
-                        canvas.drawRect(bx - benchRadius, by - benchRadius, bx + benchRadius, by + benchRadius,
-                                b.isInPark() ? paintBenchPark : paintBenchStreet);
-                    } else {
-                        if (drawHalo) {
-                            canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchHalo);
-                        }
-                        canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
+                Paint.Cap cap = isBauhaus ? Paint.Cap.SQUARE : Paint.Cap.ROUND;
+                float coreWidth = benchRadius * 2.0f;
+
+                if (drawHalo) {
+                    float haloWidth = (benchRadius + 1.2f * density) * 2.0f;
+                    paintBenchHalo.setStyle(Paint.Style.STROKE);
+                    paintBenchHalo.setStrokeCap(cap);
+                    paintBenchHalo.setStrokeWidth(haloWidth);
+                    if (parkCount > 0) {
+                        canvas.drawPoints(benchParkPts, 0, parkCount, paintBenchHalo);
                     }
+                    if (streetCount > 0) {
+                        canvas.drawPoints(benchStreetPts, 0, streetCount, paintBenchHalo);
+                    }
+                }
+
+                if (parkCount > 0) {
+                    paintBenchPark.setStyle(Paint.Style.STROKE);
+                    paintBenchPark.setStrokeCap(cap);
+                    paintBenchPark.setStrokeWidth(coreWidth);
+                    canvas.drawPoints(benchParkPts, 0, parkCount, paintBenchPark);
+                }
+
+                if (streetCount > 0) {
+                    paintBenchStreet.setStyle(Paint.Style.STROKE);
+                    paintBenchStreet.setStrokeCap(cap);
+                    paintBenchStreet.setStrokeWidth(coreWidth);
+                    canvas.drawPoints(benchStreetPts, 0, streetCount, paintBenchStreet);
                 }
             }
 
@@ -1885,29 +2018,29 @@ public class MontrealBenchMapView extends View {
                     float selSize = diamondRadius + 7.5f * density;
                     float gapSize = diamondRadius + 4.0f * density;
 
-                    Path dOuter = new Path();
-                    dOuter.moveTo(bx, by - selSize);
-                    dOuter.lineTo(bx + selSize, by);
-                    dOuter.lineTo(bx, by + selSize);
-                    dOuter.lineTo(bx - selSize, by);
-                    dOuter.close();
-                    canvas.drawPath(dOuter, paintBenchSelected);
+                    selectedDiamondOuterPath.reset();
+                    selectedDiamondOuterPath.moveTo(bx, by - selSize);
+                    selectedDiamondOuterPath.lineTo(bx + selSize, by);
+                    selectedDiamondOuterPath.lineTo(bx, by + selSize);
+                    selectedDiamondOuterPath.lineTo(bx - selSize, by);
+                    selectedDiamondOuterPath.close();
+                    canvas.drawPath(selectedDiamondOuterPath, paintBenchSelected);
 
-                    Path dGap = new Path();
-                    dGap.moveTo(bx, by - gapSize);
-                    dGap.lineTo(bx + gapSize, by);
-                    dGap.lineTo(bx, by + gapSize);
-                    dGap.lineTo(bx - gapSize, by);
-                    dGap.close();
-                    canvas.drawPath(dGap, paintBenchSelectedGap);
+                    selectedDiamondGapPath.reset();
+                    selectedDiamondGapPath.moveTo(bx, by - gapSize);
+                    selectedDiamondGapPath.lineTo(bx + gapSize, by);
+                    selectedDiamondGapPath.lineTo(bx, by + gapSize);
+                    selectedDiamondGapPath.lineTo(bx - gapSize, by);
+                    selectedDiamondGapPath.close();
+                    canvas.drawPath(selectedDiamondGapPath, paintBenchSelectedGap);
 
-                    Path dCore = new Path();
-                    dCore.moveTo(bx, by - diamondRadius);
-                    dCore.lineTo(bx + diamondRadius, by);
-                    dCore.lineTo(bx, by + diamondRadius);
-                    dCore.lineTo(bx - diamondRadius, by);
-                    dCore.close();
-                    canvas.drawPath(dCore, paintBenchSelectedCore);
+                    selectedDiamondCorePath.reset();
+                    selectedDiamondCorePath.moveTo(bx, by - diamondRadius);
+                    selectedDiamondCorePath.lineTo(bx + diamondRadius, by);
+                    selectedDiamondCorePath.lineTo(bx, by + diamondRadius);
+                    selectedDiamondCorePath.lineTo(bx - diamondRadius, by);
+                    selectedDiamondCorePath.close();
+                    canvas.drawPath(selectedDiamondCorePath, paintBenchSelectedCore);
                 } else if (isBauhaus) {
                     float selRadius = Math.max(benchRadius, 4.5f * density);
                     float outer = selRadius + 8.0f * density;
@@ -1976,13 +2109,13 @@ public class MontrealBenchMapView extends View {
             canvas.rotate(-mapRotationDegrees, ux, uy);
         }
 
-        RectF shadowRect = new RectF(
+        pinShadowRect.set(
                 ux - 8.5f * density,
                 uy - 2.5f * density,
                 ux + 8.5f * density,
                 uy + 3.5f * density
         );
-        canvas.drawOval(shadowRect, paintPinShadow);
+        canvas.drawOval(pinShadowRect, paintPinShadow);
 
         float headCenterY = uy - 22f * density;
         float headRadius = 8.5f * density;
@@ -2033,13 +2166,13 @@ public class MontrealBenchMapView extends View {
             canvas.rotate(-mapRotationDegrees, fx, fy);
         }
 
-        RectF shadowRect = new RectF(
+        pinShadowRect.set(
                 fx - 8.5f * density,
                 fy - 2.5f * density,
                 fx + 8.5f * density,
                 fy + 3.5f * density
         );
-        canvas.drawOval(shadowRect, paintPinShadow);
+        canvas.drawOval(pinShadowRect, paintPinShadow);
 
         float headCenterY = fy - 22f * density;
         float headRadius = 8.5f * density;
@@ -2201,13 +2334,13 @@ public class MontrealBenchMapView extends View {
                 cx + radius + 8f * density, cy + radius + 8f * density);
 
         // Ground subtle shadow
-        RectF shadowRect = new RectF(
+        compassShadowRect.set(
                 cx - radius - 1f * density,
                 cy - radius + 1f * density,
                 cx + radius + 1f * density,
                 cy + radius + 3f * density
         );
-        canvas.drawOval(shadowRect, paintPinShadow);
+        canvas.drawOval(compassShadowRect, paintPinShadow);
 
         // Background & stroke
         canvas.drawCircle(cx, cy, radius, paintCompassBg);
