@@ -4,7 +4,7 @@
     android:id="@+id/dialog_photo_viewer_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5090A0C">
+    android:background="#000000">
 
     <ImageView
         android:id="@+id/iv_fullscreen_photo"
