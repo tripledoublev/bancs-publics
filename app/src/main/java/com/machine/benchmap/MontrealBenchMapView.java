@@ -341,6 +341,31 @@ public class MontrealBenchMapView extends View {
     private double lastRotationAngle = 0;
     private boolean isRotating = false;
     private ValueAnimator rotationAnimator = null;
+    private boolean showFloatingCompass = false;
+
+    public interface OnRotationChangeListener {
+        void onRotationChanged(float rotationDegrees);
+    }
+    private OnRotationChangeListener rotationChangeListener = null;
+
+    public void setOnRotationChangeListener(OnRotationChangeListener listener) {
+        this.rotationChangeListener = listener;
+        if (listener != null) {
+            listener.onRotationChanged(mapRotationDegrees);
+        }
+    }
+
+    private void notifyRotationChanged() {
+        if (rotationChangeListener != null) {
+            rotationChangeListener.onRotationChanged(mapRotationDegrees);
+        }
+    }
+
+    public void setShowFloatingCompass(boolean show) {
+        this.showFloatingCompass = show;
+        invalidate();
+    }
+
     private final RectF compassBounds = new RectF();
     private float compassTopPx = -1f;
     private final Paint paintCompassBg = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -905,7 +930,7 @@ public class MontrealBenchMapView extends View {
                 }
                 float touchX = e.getX();
                 float touchY = e.getY();
-                if (compassBounds.contains(touchX, touchY)) {
+                if (showFloatingCompass && compassBounds.contains(touchX, touchY)) {
                     return;
                 }
 
@@ -1017,6 +1042,7 @@ public class MontrealBenchMapView extends View {
                         mapRotationDegrees = 0f;
                     }
                     lastRotationAngle = currentAngle;
+                    notifyRotationChanged();
                     invalidate();
                 }
             }
@@ -1411,7 +1437,7 @@ public class MontrealBenchMapView extends View {
     }
 
     private void handleTap(float touchX, float touchY) {
-        if (compassBounds.contains(touchX, touchY)) {
+        if (showFloatingCompass && compassBounds.contains(touchX, touchY)) {
             performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
             onCompassTapped();
             return;
@@ -1743,8 +1769,10 @@ public class MontrealBenchMapView extends View {
 
         canvas.restore();
 
-        // 10. Swiss Minimal Compass Rose (always present for one-tap orientation & zoom)
-        drawSwissCompass(canvas, w, h);
+        // 10. Swiss Minimal Compass Rose (if floating mode is enabled)
+        if (showFloatingCompass) {
+            drawSwissCompass(canvas, w, h);
+        }
     }
 
     private void drawUserPin(Canvas canvas, float ux, float uy, float accuracyMeters) {
@@ -2063,6 +2091,7 @@ public class MontrealBenchMapView extends View {
             if (Math.abs(mapRotationDegrees) < 0.2f || Math.abs(mapRotationDegrees - 360f) < 0.2f) {
                 mapRotationDegrees = 0f;
             }
+            notifyRotationChanged();
             invalidate();
         });
         rotationAnimator.start();
@@ -2074,6 +2103,7 @@ public class MontrealBenchMapView extends View {
 
     public void setMapRotation(float rotationDegrees) {
         this.mapRotationDegrees = (rotationDegrees % 360f + 360f) % 360f;
+        notifyRotationChanged();
         invalidate();
     }
 

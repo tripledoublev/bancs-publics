@@ -105,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private ImageView btnCollections;
     private ImageView btnThemeToggle;
     private ImageView btnMeetup;
+    private SwissCompassView btnCompass;
     private boolean isDarkMode = false;
 
     // Rendez-vous (Meetup) Banner
@@ -236,6 +237,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
         btnMeetup = findViewById(R.id.btn_meetup);
         btnCollections = findViewById(R.id.btn_collections);
+        btnCompass = findViewById(R.id.btn_compass);
 
         cardMeetupBanner = findViewById(R.id.card_meetup_banner);
         tvMeetupBannerTitle = findViewById(R.id.tv_meetup_banner_title);
@@ -352,6 +354,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         }
         if (btnMapStyle != null) {
             btnMapStyle.setImageTintList(ColorStateList.valueOf(darkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318")));
+        }
+        if (btnCompass != null) {
+            btnCompass.setDarkMode(darkMode);
         }
 
         // Rendez-vous Banner Styling
@@ -515,6 +520,19 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                     .putBoolean(PREF_DARK_MODE, newMode)
                     .apply();
             applyTheme(newMode);
+        });
+
+        if (btnCompass != null) {
+            btnCompass.setOnClickListener(v -> {
+                triggerHapticTick();
+                benchMapView.onCompassTapped();
+            });
+        }
+
+        benchMapView.setOnRotationChangeListener(degrees -> {
+            if (btnCompass != null) {
+                btnCompass.setCompassRotation(degrees);
+            }
         });
 
         fabMyLocation.setOnClickListener(v -> {

@@ -83,43 +83,52 @@
                 <!-- Action icons cluster -->
                 <ImageView
                     android:id="@+id/btn_map_style"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="3dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Styles de rendu cartographique"
-                    android:padding="8dp"
+                    android:padding="7dp"
                     android:src="@drawable/ic_palette" />
 
                 <ImageView
                     android:id="@+id/btn_collections"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="3dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mes collections de bancs"
-                    android:padding="8dp"
+                    android:padding="7dp"
                     android:src="@drawable/ic_bookmark" />
 
                 <ImageView
                     android:id="@+id/btn_meetup"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="3dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Trouvez un banc entre les deux"
-                    android:padding="8dp"
+                    android:padding="7dp"
                     android:src="@drawable/ic_meetup" />
 
                 <ImageView
                     android:id="@+id/btn_theme_toggle"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="3dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mode sombre"
-                    android:padding="8dp"
+                    android:padding="7dp"
                     android:src="@drawable/ic_theme_moon" />
+
+                <com.machine.benchmap.SwissCompassView
+                    android:id="@+id/btn_compass"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Boussole et orientation Nord"
+                    android:padding="5dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
