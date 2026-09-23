@@ -460,87 +460,139 @@
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <!-- 3. Floating Action Controls (Right Bottom Dock) -->
-    <LinearLayout
+    <!-- 3. Floating Action Controls (Bottom Dock - Single Row) -->
+    <HorizontalScrollView
         android:id="@+id/layout_bottom_controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:orientation="vertical"
-        android:gravity="end"
-        android:layout_marginBottom="24dp"
-        android:layout_marginEnd="16dp">
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fab_my_location"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:fabSize="mini"
-            app:backgroundTint="@color/bg_card"
-            app:tint="@color/swiss_black"
-            app:elevation="2dp"
-            android:contentDescription="Ma position"
-            android:src="@android:drawable/ic_menu_mylocation" />
+        android:layout_gravity="bottom|center_horizontal"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:clipToPadding="false"
+        android:clipChildren="false"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="14dp"
+        android:layout_marginBottom="16dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:clipToPadding="false"
+            android:clipChildren="false"
+            android:paddingTop="4dp"
+            android:paddingBottom="6dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_search"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
+                android:minHeight="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
                 android:text="🔍 RECHERCHE"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
                 app:cornerRadius="22dp"
                 android:backgroundTint="@color/bg_card"
                 android:textColor="@color/swiss_black"
                 app:strokeColor="@color/card_border"
                 app:strokeWidth="1dp"
                 app:elevation="2dp"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="6dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_random"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
+                android:minHeight="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
                 android:text="🎲 AU HASARD"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
                 app:cornerRadius="22dp"
                 android:backgroundTint="@color/bg_card"
                 android:textColor="@color/swiss_black"
                 app:strokeColor="@color/card_border"
                 app:strokeWidth="1dp"
                 app:elevation="2dp"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="6dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_nearest"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
+                android:minHeight="44dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
                 android:text="🧭 LE PLUS PROCHE"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
                 app:cornerRadius="22dp"
                 android:backgroundTint="@color/swiss_black"
                 android:textColor="#FFFFFF"
-                app:elevation="2dp" />
+                app:elevation="2dp"
+                android:layout_marginEnd="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fab_my_location"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:minWidth="44dp"
+                android:minHeight="44dp"
+                android:padding="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                app:cornerRadius="22dp"
+                app:icon="@android:drawable/ic_menu_mylocation"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/swiss_black"
+                android:backgroundTint="@color/bg_card"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp"
+                app:elevation="2dp"
+                android:contentDescription="Ma position" />
         </LinearLayout>
-    </LinearLayout>
+    </HorizontalScrollView>
 
     <!-- 4. Detail Card (Refined Bottom Sheet Card) -->
     <com.google.android.material.card.MaterialCardView

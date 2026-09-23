@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private int selectedBlurRadius = MeetupKey.BLUR_DISTRICT;
 
     // Controls
-    private FloatingActionButton fabMyLocation;
+    private MaterialButton fabMyLocation;
     private MaterialButton btnSearch;
     private MaterialButton btnRandom;
     private MaterialButton btnNearest;
@@ -485,8 +485,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         // 2. Bottom Floating Controls
         if (fabMyLocation != null) {
-            fabMyLocation.setBackgroundTintList(ColorStateList.valueOf(bgCard));
-            fabMyLocation.setImageTintList(ColorStateList.valueOf(textPrimary));
+            fabMyLocation.setBackgroundColor(bgCard);
+            fabMyLocation.setIconTint(ColorStateList.valueOf(textPrimary));
+            fabMyLocation.setStrokeColor(ColorStateList.valueOf(borderCard));
         }
         if (btnSearch != null) {
             btnSearch.setBackgroundColor(bgCard);
