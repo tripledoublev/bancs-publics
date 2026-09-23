@@ -390,6 +390,10 @@ public class MontrealBenchMapView extends View {
     private long lastSingleTapUpTime = 0;
     private float lastSingleTapUpX = 0;
     private float lastSingleTapUpY = 0;
+    private boolean gestureHadMultiTouch = false;
+    private boolean gestureHadMovement = false;
+    private float touchDownX = 0f;
+    private float touchDownY = 0f;
 
     // Vector Data & Spatial Index
     private final Object dataLock = new Object();
@@ -760,6 +764,7 @@ public class MontrealBenchMapView extends View {
             @Override
             public boolean onScaleBegin(ScaleGestureDetector detector) {
                 isScaling = true;
+                gestureHadMultiTouch = true;
                 scroller.forceFinished(true);
                 if (animator != null && animator.isRunning()) animator.cancel();
                 lastFocusX = detector.getFocusX();
@@ -769,6 +774,8 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onScale(ScaleGestureDetector detector) {
+                isScaling = true;
+                gestureHadMultiTouch = true;
                 float factor = detector.getScaleFactor();
                 if (Float.isNaN(factor) || Float.isInfinite(factor) || factor <= 0f) return true;
 
@@ -802,6 +809,7 @@ public class MontrealBenchMapView extends View {
             @Override
             public void onScaleEnd(ScaleGestureDetector detector) {
                 isScaling = false;
+                gestureHadMultiTouch = true;
                 lastScaleEndTime = System.currentTimeMillis();
             }
         });
@@ -822,12 +830,13 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+                gestureHadMovement = true;
                 // Suppress single-finger scroll jumps when multiple touches or right after scaling or double-tap
-                if (isScaling || isRotating || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
+                if (isScaling || isRotating || scaleDetector.isInProgress() || gestureHadMultiTouch || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100 || now - lastDoubleTapTime < 400) {
+                if (now - lastPointerUpTime < 300 || now - lastScaleEndTime < 300 || now - lastDoubleTapTime < 400) {
                     return false;
                 }
 
@@ -849,11 +858,11 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                if (isScaling || isRotating || scaleDetector.isInProgress() || (e2 != null && e2.getPointerCount() > 1)) {
+                if (isScaling || isRotating || scaleDetector.isInProgress() || gestureHadMultiTouch || (e2 != null && e2.getPointerCount() > 1)) {
                     return false;
                 }
                 long now = System.currentTimeMillis();
-                if (now - lastPointerUpTime < 100 || now - lastScaleEndTime < 100 || now - lastDoubleTapTime < 400) {
+                if (now - lastPointerUpTime < 300 || now - lastScaleEndTime < 300 || now - lastDoubleTapTime < 400) {
                     return false;
                 }
 
@@ -868,7 +877,9 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
-                if (!isScaling && !isRotating) {
+                long now = System.currentTimeMillis();
+                boolean recentlyPinched = (now - lastPointerUpTime < 500) || (now - lastScaleEndTime < 500);
+                if (!isScaling && !isRotating && !gestureHadMultiTouch && !gestureHadMovement && !recentlyPinched) {
                     handleTap(e.getX(), e.getY());
                 }
                 return true;
@@ -877,7 +888,7 @@ public class MontrealBenchMapView extends View {
             @Override
             public boolean onDoubleTap(MotionEvent e) {
                 lastDoubleTapTime = System.currentTimeMillis();
-                if (!isScaling && !isRotating) {
+                if (!isScaling && !isRotating && !gestureHadMultiTouch) {
                     double tapMercX = screenToMercX(e.getX(), e.getY());
                     double tapMercY = screenToMercY(e.getX(), e.getY());
                     animateToMerc(tapMercX, tapMercY, Math.min(MAX_SCALE, scale * 2.2f));
@@ -887,7 +898,9 @@ public class MontrealBenchMapView extends View {
 
             @Override
             public void onLongPress(MotionEvent e) {
-                if (isScaling || isRotating || scaleDetector.isInProgress() || (e != null && e.getPointerCount() > 1)) {
+                long now = System.currentTimeMillis();
+                boolean recentlyPinched = (now - lastPointerUpTime < 600) || (now - lastScaleEndTime < 600);
+                if (isScaling || isRotating || scaleDetector.isInProgress() || gestureHadMultiTouch || gestureHadMovement || recentlyPinched || (e != null && e.getPointerCount() > 1)) {
                     return;
                 }
                 float touchX = e.getX();
@@ -898,7 +911,7 @@ public class MontrealBenchMapView extends View {
 
                 double touchMercX = screenToMercX(touchX, touchY);
                 double touchMercY = screenToMercY(touchX, touchY);
-                float hitRadiusPx = 14f * density;
+                float hitRadiusPx = 18f * density;
                 double hitRadiusMerc = hitRadiusPx / scale;
 
                 Bench hit = null;
@@ -917,6 +930,7 @@ public class MontrealBenchMapView extends View {
                     hit = spatialIndex.findTapHit(touchMercX, touchMercY, hitRadiusMerc);
                 }
 
+                // Only trigger if long-pressed on empty ground (not on a bench)
                 if (hit == null) {
                     performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     double lat = Bench.toDegreesLat(touchMercY);
@@ -924,11 +938,18 @@ public class MontrealBenchMapView extends View {
                     if (mapListener != null) {
                         mapListener.onMapLongPressed(lat, lon, touchX, touchY);
                     }
-                } else {
-                    handleTap(touchX, touchY);
                 }
             }
         });
+    }
+
+    private void cancelGestureDetector(MotionEvent event) {
+        if (gestureDetector != null) {
+            MotionEvent cancel = MotionEvent.obtain(event);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            gestureDetector.onTouchEvent(cancel);
+            cancel.recycle();
+        }
     }
 
     @Override
@@ -942,47 +963,69 @@ public class MontrealBenchMapView extends View {
                 if (animator != null && animator.isRunning()) animator.cancel();
             }
             if (rotationAnimator != null && rotationAnimator.isRunning()) rotationAnimator.cancel();
+
+            gestureHadMultiTouch = false;
+            gestureHadMovement = false;
+            touchDownX = event.getX();
+            touchDownY = event.getY();
         }
 
-        if (action == MotionEvent.ACTION_POINTER_DOWN && pointerCount >= 2) {
+        if (action == MotionEvent.ACTION_POINTER_DOWN) {
+            gestureHadMultiTouch = true;
             isScaling = true;
-            float p0x = event.getX(0);
-            float p0y = event.getY(0);
-            float p1x = event.getX(1);
-            float p1y = event.getY(1);
-            lastRotationAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
-            isRotating = true;
+            cancelGestureDetector(event);
+            if (pointerCount >= 2) {
+                float p0x = event.getX(0);
+                float p0y = event.getY(0);
+                float p1x = event.getX(1);
+                float p1y = event.getY(1);
+                lastRotationAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
+                isRotating = true;
+            }
         }
 
-        if (action == MotionEvent.ACTION_MOVE && pointerCount >= 2 && isRotating) {
-            float p0x = event.getX(0);
-            float p0y = event.getY(0);
-            float p1x = event.getX(1);
-            float p1y = event.getY(1);
-            double currentAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
-            double delta = currentAngle - lastRotationAngle;
-            while (delta > 180.0) delta -= 360.0;
-            while (delta < -180.0) delta += 360.0;
-
-            if (Math.abs(delta) > 0.05) {
-                float oldRot = mapRotationDegrees;
-                mapRotationDegrees += (float) delta;
-                mapRotationDegrees = (mapRotationDegrees % 360f + 360f) % 360f;
-
-                // Snap to North if within 3.5 degrees
-                if (mapRotationDegrees < 3.5f || mapRotationDegrees > 356.5f) {
-                    if (oldRot != 0f) {
-                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                    }
-                    mapRotationDegrees = 0f;
+        if (action == MotionEvent.ACTION_MOVE) {
+            if (pointerCount == 1) {
+                float dist = (float) Math.hypot(event.getX() - touchDownX, event.getY() - touchDownY);
+                if (dist > 8f * density) {
+                    gestureHadMovement = true;
                 }
-                lastRotationAngle = currentAngle;
-                invalidate();
+            } else {
+                gestureHadMultiTouch = true;
+            }
+
+            if (pointerCount >= 2 && isRotating) {
+                float p0x = event.getX(0);
+                float p0y = event.getY(0);
+                float p1x = event.getX(1);
+                float p1y = event.getY(1);
+                double currentAngle = Math.toDegrees(Math.atan2(p1y - p0y, p1x - p0x));
+                double delta = currentAngle - lastRotationAngle;
+                while (delta > 180.0) delta -= 360.0;
+                while (delta < -180.0) delta += 360.0;
+
+                if (Math.abs(delta) > 0.05) {
+                    float oldRot = mapRotationDegrees;
+                    mapRotationDegrees += (float) delta;
+                    mapRotationDegrees = (mapRotationDegrees % 360f + 360f) % 360f;
+
+                    // Snap to North if within 3.5 degrees
+                    if (mapRotationDegrees < 3.5f || mapRotationDegrees > 356.5f) {
+                        if (oldRot != 0f) {
+                            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        }
+                        mapRotationDegrees = 0f;
+                    }
+                    lastRotationAngle = currentAngle;
+                    invalidate();
+                }
             }
         }
 
         if (action == MotionEvent.ACTION_POINTER_UP) {
             lastPointerUpTime = System.currentTimeMillis();
+            gestureHadMultiTouch = true;
+            cancelGestureDetector(event);
             if (pointerCount <= 2) {
                 isRotating = false;
             }
@@ -992,8 +1035,11 @@ public class MontrealBenchMapView extends View {
             long now = System.currentTimeMillis();
             float upX = event.getX();
             float upY = event.getY();
-            float slopPx = 36f * density;
-            if (pointerCount == 1 && (now - lastSingleTapUpTime < 320) && (Math.hypot(upX - lastSingleTapUpX, upY - lastSingleTapUpY) < slopPx)) {
+            float slopPx = 32f * density;
+            boolean recentlyPinched = (now - lastPointerUpTime < 500) || (now - lastScaleEndTime < 500);
+
+            if (pointerCount == 1 && !gestureHadMultiTouch && !gestureHadMovement && !recentlyPinched
+                    && (now - lastSingleTapUpTime < 320) && (Math.hypot(upX - lastSingleTapUpX, upY - lastSingleTapUpY) < slopPx)) {
                 if (now - lastDoubleTapTime > 350 && !isScaling && !isRotating) {
                     lastDoubleTapTime = now;
                     double tapMercX = screenToMercX(upX, upY);
@@ -1002,23 +1048,28 @@ public class MontrealBenchMapView extends View {
                 }
                 lastSingleTapUpTime = 0;
             } else {
-                lastSingleTapUpTime = now;
-                lastSingleTapUpX = upX;
-                lastSingleTapUpY = upY;
+                if (pointerCount == 1 && !gestureHadMultiTouch && !gestureHadMovement && !recentlyPinched) {
+                    lastSingleTapUpTime = now;
+                    lastSingleTapUpX = upX;
+                    lastSingleTapUpY = upY;
+                } else {
+                    lastSingleTapUpTime = 0;
+                }
             }
             isScaling = false;
             isRotating = false;
         } else if (action == MotionEvent.ACTION_CANCEL) {
             isScaling = false;
             isRotating = false;
+            lastSingleTapUpTime = 0;
         }
 
         scaleDetector.onTouchEvent(event);
 
         long now = System.currentTimeMillis();
-        boolean recentlyPinched = (now - lastPointerUpTime < 100) || (now - lastScaleEndTime < 100);
+        boolean recentlyPinched = (now - lastPointerUpTime < 500) || (now - lastScaleEndTime < 500);
 
-        if (pointerCount == 1 && !isScaling && !isRotating && !scaleDetector.isInProgress() && !recentlyPinched) {
+        if (pointerCount == 1 && !isScaling && !isRotating && !scaleDetector.isInProgress() && !recentlyPinched && !gestureHadMultiTouch) {
             gestureDetector.onTouchEvent(event);
         }
         return true;
@@ -1370,7 +1421,7 @@ public class MontrealBenchMapView extends View {
         double touchMercX = screenToMercX(touchX, touchY);
         double touchMercY = screenToMercY(touchX, touchY);
 
-        float hitRadiusPx = 36f * density;
+        float hitRadiusPx = 20f * density;
         double hitRadiusMerc = hitRadiusPx / scale;
 
         Bench hit = null;
