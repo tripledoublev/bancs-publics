@@ -14,6 +14,29 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 ## Features / Fonctionnalités
 
 - **100% Offline Vector Rendering**: Custom Canvas engine rendering authentic physical island shorelines (Île de Montréal, Île des Sœurs, Île Sainte-Hélène, Île Notre-Dame, Île Bizard, Île de la Visitation), 1,648 municipal parks, 29,708 street segments, and 9,602 benches via OpenGL `drawLines` hardware batching.
+- **🧭 Boussole Suisse Intégrée au Bandeau**:
+  - Intégrée avec précision comme **dernière icône à droite** du bandeau de navigation supérieur.
+  - Aiguille bicolore dynamique (Rouge suisse `#E52B35` / `#FF383C` pour le Nord, Ardoise `#94A3B8` / `#64748B` pour le Sud) pivotant en temps réel au rythme de la rotation de la carte.
+  - **Réalignement True North** : Un simple tap sur la boussole réinitialise l'orientation au Nord avec animation fluide et zoom avant d'exploration.
+  - Libère 100 % de l'espace sur le canvas cartographique pour une clarté visuelle totale.
+- **🔍 Moteur de Recherche d'Adresses Civiques & Lieux**:
+  - Recherche instantanée par adresse municipale exacte (géocodage local & `Geocoder` Android, ex: *« 3450 Saint-Urbain »*).
+  - Index pré-chargé des quartiers montréalais (*Plateau-Mont-Royal, Mile End, Vieux-Montréal, Griffintown, Petite Italie, Verdun, Hochelaga...*) et lieux d'intérêt (*Belvédère Mont-Royal, Oratoire Saint-Joseph, Marché Jean-Talon, Place des Arts, Parc La Fontaine...*).
+  - Support direct des coordonnées GPS (`lat, lon`).
+  - Recentrage et zoom automatique fluide sur l'emplacement choisi avec confirmation visuelle.
+- **◆ Ajout de Bancs Personnalisés (« Mes bancs »)**:
+  - **Appui long** sur une zone libre de la carte pour ajouter un banc public repéré sur le terrain mais absent du jeu de données officiel de la Ville.
+  - **Glyphe distinctif en losange (`◆`)** ambre/terracotta avec contour contrasté et cœur blanc, le différenciant instantanément des bancs circulaires standards.
+  - **Fiche d'ajout complète** : Coordonnées GPS précises, nom/repère, rue/parc, matériau (Bois, Métal, Béton, Pierre, Autre), présence d'un dossier, note personnelle et photographies locales.
+  - **Collection permanente « Mes bancs »** en tête des listes de favoris, modifiable et consultable 100% hors-ligne.
+- **🖼 Visualiseur Photo Immersif Plein Écran (Noir OLED)**:
+  - Affichage plein écran des photos des bancs sur un fond en noir absolu OLED (`#000000`).
+  - Masquage automatique des barres système (`displayCutout` et `statusBars`) pour une immersion totale sans démarcation.
+  - Bouton fermer 'X' contrasté cerclé de blanc, et fermeture instantanée d'un simple tap sur l'écran.
+- **📐 Isolation Tactile & Anti-Conflits Gestuels**:
+  - Annulation instantanée des minuteries d'appui long et de clic dès l'amorce d'un zoom multi-touch (`ACTION_CANCEL` vers le gesture detector).
+  - Rayon de sélection précis (20 dp) éliminant tout déclenchement intempestif lors du déplacement de la carte.
+  - Double-tap zoom instantané sur le point d'impact.
 - **🎨 8 Styles Cartographiques & Rotation Quotidienne**:
   - Un style graphique différent chaque jour de la semaine ou sélection manuelle :
     - *Clean Minimal* (Standard épuré)
@@ -24,11 +47,9 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
     - *Tracé Artistique* (Esquisse organique et traits vivants)
     - *Matrice Pointillée* (Texture pointilliste)
     - *Noir Argentique* (Monochrome contrasté)
-- **👆 Gestuelle Fluide & Boussole Interactive**:
-  - **Double-tap zoom** : Zoom instantané et centrage fluide sur la zone tapée.
-  - **Rotation libre à 2 doigts** : Orientation de la carte avec retour haptique d'aimantation au Nord.
-  - **Épingles verticales stabilisées** : Les épingles (position courante et ami) contre-pivotent automatiquement pour rester toujours droites et verticales face à l'utilisateur, quelle que soit l'orientation de la carte.
-  - **Boussole épurée** : Cadran ultra-clean sans fioritures indiquant le Nord en continu ; un simple tap réinitialise l'orientation au Nord et effectue un zoom avant.
+- **👆 Gestuelle Fluide & Épingles Stabilisées**:
+  - **Rotation libre à 2 doigts** : Orientation libre avec retour haptique d'aimantation au Nord (snap 3.5°).
+  - **Épingles verticales stabilisées** : Les épingles de position contre-pivotent automatiquement pour rester toujours droites face à l'utilisateur.
 - **Ultra-Fast Binary Map Format**: Custom IEEE 754 float binary format (`montreal_map.bin`) loads the complete municipal bench cartography in **<70 ms** with zero JSON garbage collection overhead.
 - **Dual Minimalist Themes**:
   - **Nordic Paper & Precision Ink (Light)**: Warm architectural paper, sage green parks, crisp arterial slate lines, and deep charcoal bench markers.
@@ -44,11 +65,6 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - **Privacy Blur Levels**: Choose exact coordinates, subtle ~150 m street blur, or ~300 m neighborhood blur to protect home address privacy.
   - **Fair Halfway Filtering**: Mathematical fairness algorithm finds candidate benches located at the exact halfway midpoint between both friends, minimizing walking time disparity.
   - **Interactive Meetup Mode**: Live geodesic connecting axis, Cobalt Blue friend pin, glowing amber candidate halos, and real-time travel comparison (`Vous: 1,4 km • Ami: 1,4 km (Écart: 20 m)`).
-- **◆ Ajout de bancs personnalisés (« Mes bancs »)**:
-  - **Appui long** sur une zone libre de la carte pour ajouter un banc public repéré sur le terrain mais absent du jeu de données officiel de la Ville.
-  - **Glyphe distinctif en losange (`◆`)** ambre/terracotta avec contour contrasté et cœur blanc, le différenciant instantanément des bancs circulaires standards.
-  - **Fiche d'ajout complète** : Coordonnées GPS précises, nom/repère, rue/parc, matériau (Bois, Métal, Béton, Pierre, Autre), présence d'un dossier, note personnelle et photographies locales.
-  - **Collection permanente « Mes bancs »** en tête des listes de favoris, modifiable et consultable 100% hors-ligne.
 - **🔍 Zoom Haute Précision Sub-Métrique**:
   - Niveau de zoom poussé jusqu'à une échelle de 65 000 000 (~70 m d'envergure d'écran) permettant de distinguer l'emplacement exact de chaque banc par rapport aux allées et trottoirs.
 - **100% Local & Sécurisé**: Données et photos stockées exclusivement en local sur l'appareil (`collections.json` et `bench_photos/`). Aucun serveur, aucun pistage.
@@ -56,11 +72,11 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 
 ---
 
-## Screenshots
+## Screenshots / Aperçus
 
-| Nordic Paper (Light Mode) | Nocturne (Dark Mode) |
-| :---: | :---: |
-| <img src="screenshot_light_mode.png" width="340" /> | <img src="dark_mode.png" width="340" /> |
+| Mode Clair (Nordic Paper) | Mode Sombre (Nocturne OLED) | Visualiseur Plein Écran |
+| :---: | :---: | :---: |
+| <img src="screenshot_light_mode.png" width="280" /> | <img src="screenshot_dark_mode.png" width="280" /> | <img src="screenshot_photo_viewer.png" width="280" /> |
 
 ---
 
@@ -68,7 +84,7 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 
 - **Platform**: Android 10+ (API 29 to API 34)
 - **Language**: Java 17
-- **UI Architecture**: Hardware-accelerated Custom View (`MontrealBenchMapView.java`) + Material Components 3
+- **UI Architecture**: Hardware-accelerated Custom View (`MontrealBenchMapView.java`, `SwissCompassView.java`) + Material Components 3
 - **Spatial Indexing**: 2D Uniform Spatial Grid partitioning over WGS 84 Web Mercator projection
 - **Data Source**: [Données ouvertes — Ville de Montréal](https://donnees.montreal.ca/)
 
@@ -96,7 +112,7 @@ cd bancs-publics
 ```
 
 Output APK will be located at:
-`app/build/outputs/apk/release/app-release-unsigned.apk` (or signed if `benchmap-release.jks` is provided).
+`app/build/outputs/apk/release/app-release.apk` (or signed if `benchmap-release.jks` is provided).
 
 ---
 
