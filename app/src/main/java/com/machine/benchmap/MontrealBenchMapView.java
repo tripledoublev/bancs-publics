@@ -443,6 +443,11 @@ public class MontrealBenchMapView extends View {
 
     // State
     private Bench selectedBench = null;
+    private float headerBottomPx = 0f;
+
+    public void setHeaderBottomPx(float bottomPx) {
+        this.headerBottomPx = bottomPx;
+    }
     private Location userLocation = null;
     private float userHeadingDegrees = -1f;
     private BenchMapListener mapListener;
@@ -930,6 +935,9 @@ public class MontrealBenchMapView extends View {
                 }
                 float touchX = e.getX();
                 float touchY = e.getY();
+                if (touchY <= headerBottomPx) {
+                    return;
+                }
                 if (showFloatingCompass && compassBounds.contains(touchX, touchY)) {
                     return;
                 }
@@ -1437,6 +1445,9 @@ public class MontrealBenchMapView extends View {
     }
 
     private void handleTap(float touchX, float touchY) {
+        if (touchY <= headerBottomPx) {
+            return;
+        }
         if (showFloatingCompass && compassBounds.contains(touchX, touchY)) {
             performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);
             onCompassTapped();
@@ -1930,6 +1941,14 @@ public class MontrealBenchMapView extends View {
 
     public List<Bench> getMeetupBenches() {
         return new ArrayList<>(meetupBenches);
+    }
+
+    public double getCenterLat() {
+        return Bench.toDegreesLat(centerMercY);
+    }
+
+    public double getCenterLon() {
+        return Bench.toDegreesLon(centerMercX);
     }
 
     public List<Bench> getAllBenches() {

@@ -41,6 +41,11 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import androidx.cardview.widget.CardView;
+import androidx.activity.OnBackPressedCallback;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.inputmethod.InputMethodManager;
+import android.view.ViewTreeObserver;
 
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -108,6 +113,17 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private SwissCompassView btnCompass;
     private boolean isDarkMode = false;
 
+    // All Benches Full Inventory Panel
+    private MaterialCardView cardAllBenches;
+    private TextView tvAllBenchesTitle, tvAllBenchesSubtitle, tvCounterChevron, tvAllBenchesCountBadge;
+    private ImageView btnCloseAllBenches, btnClearAllBenchesSearch;
+    private LinearLayout layoutSearchBenchesBox, layoutAllBenchesEmpty;
+    private EditText etSearchAllBenches;
+    private MaterialButton btnSortProximity, btnSortBorough;
+    private View dividerAllBenches;
+    private RecyclerView recyclerAllBenches;
+    private AllBenchesAdapter allBenchesAdapter;
+
     // Rendez-vous (Meetup) Banner
     private MaterialCardView cardMeetupBanner;
     private TextView tvMeetupBannerTitle, tvMeetupBannerSubtitle;
@@ -172,6 +188,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         public void onLocationChanged(@NonNull Location location) {
             lastLocation = location;
             benchMapView.setUserLocation(location);
+            if (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE && allBenchesAdapter != null) {
+                allBenchesAdapter.updateDistances(location.getLatitude(), location.getLongitude());
+            }
         }
 
         @Override
@@ -217,6 +236,22 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         benchMapView.setCustomBenches(collectionManager.getAllCustomBenches());
         checkLocationPermission();
         handleIntent(getIntent());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE) {
+                    hideAllBenchesPanel();
+                    return;
+                }
+                if (currentlySelectedBench != null) {
+                    benchMapView.deselectBench();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
     }
 
     @Override
@@ -233,11 +268,36 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         layoutCounterBadge = findViewById(R.id.layout_counter_badge);
         layoutBottomControls = findViewById(R.id.layout_bottom_controls);
         tvBenchCounter = findViewById(R.id.tv_bench_counter);
+        tvCounterChevron = findViewById(R.id.tv_counter_chevron);
         btnMapStyle = findViewById(R.id.btn_map_style);
         btnThemeToggle = findViewById(R.id.btn_theme_toggle);
         btnMeetup = findViewById(R.id.btn_meetup);
         btnCollections = findViewById(R.id.btn_collections);
         btnCompass = findViewById(R.id.btn_compass);
+
+        cardAllBenches = findViewById(R.id.card_all_benches);
+        tvAllBenchesTitle = findViewById(R.id.tv_all_benches_title);
+        tvAllBenchesSubtitle = findViewById(R.id.tv_all_benches_subtitle);
+        btnCloseAllBenches = findViewById(R.id.btn_close_all_benches);
+        layoutSearchBenchesBox = findViewById(R.id.layout_search_benches_box);
+        etSearchAllBenches = findViewById(R.id.et_search_all_benches);
+        btnClearAllBenchesSearch = findViewById(R.id.btn_clear_all_benches_search);
+        btnSortProximity = findViewById(R.id.btn_sort_proximity);
+        btnSortBorough = findViewById(R.id.btn_sort_borough);
+        tvAllBenchesCountBadge = findViewById(R.id.tv_all_benches_count_badge);
+        dividerAllBenches = findViewById(R.id.divider_all_benches);
+        recyclerAllBenches = findViewById(R.id.recycler_all_benches);
+        layoutAllBenchesEmpty = findViewById(R.id.layout_all_benches_empty);
+
+        if (recyclerAllBenches != null) {
+            recyclerAllBenches.setLayoutManager(new LinearLayoutManager(this));
+            allBenchesAdapter = new AllBenchesAdapter(bench -> {
+                triggerHapticTick();
+                hideAllBenchesPanel();
+                benchMapView.focusBench(bench);
+            });
+            recyclerAllBenches.setAdapter(allBenchesAdapter);
+        }
 
         cardMeetupBanner = findViewById(R.id.card_meetup_banner);
         tvMeetupBannerTitle = findViewById(R.id.tv_meetup_banner_title);
@@ -286,6 +346,13 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                     if (benchMapView != null) {
                         float margin = 12f * getResources().getDisplayMetrics().density;
                         benchMapView.setCompassTopMargin(layoutHeader.getBottom() + margin);
+                        benchMapView.setHeaderBottomPx(layoutHeader.getBottom());
+                    }
+                    if (cardAllBenches != null) {
+                        FrameLayout.LayoutParams lpAll = (FrameLayout.LayoutParams) cardAllBenches.getLayoutParams();
+                        lpAll.topMargin = layoutHeader.getBottom() + (int) (8 * getResources().getDisplayMetrics().density);
+                        lpAll.bottomMargin = navInsets.bottom + (int) (16 * getResources().getDisplayMetrics().density);
+                        cardAllBenches.setLayoutParams(lpAll);
                     }
                 });
             }
@@ -335,12 +402,52 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             GradientDrawable counterDrawable = new GradientDrawable();
             counterDrawable.setShape(GradientDrawable.RECTANGLE);
             counterDrawable.setCornerRadius(12f * d);
-            counterDrawable.setColor(chipBg);
-            counterDrawable.setStroke((int) (1f * d), borderCard);
+            boolean isPanelOpen = (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE);
+            if (isPanelOpen) {
+                counterDrawable.setColor(darkMode ? Color.parseColor("#2E1214") : Color.parseColor("#FEF2F2"));
+                counterDrawable.setStroke((int) (1.5f * d), darkMode ? Color.parseColor("#FF383C") : Color.parseColor("#E52B35"));
+            } else {
+                counterDrawable.setColor(chipBg);
+                counterDrawable.setStroke((int) (1f * d), borderCard);
+            }
             layoutCounterBadge.setBackground(counterDrawable);
         }
         if (tvBenchCounter != null) {
-            tvBenchCounter.setTextColor(textPrimary);
+            boolean isPanelOpen = (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE);
+            tvBenchCounter.setTextColor(isPanelOpen ? (darkMode ? Color.parseColor("#FF6467") : Color.parseColor("#D92D20")) : textPrimary);
+        }
+        if (tvCounterChevron != null) {
+            boolean isPanelOpen = (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE);
+            tvCounterChevron.setTextColor(isPanelOpen ? (darkMode ? Color.parseColor("#FF6467") : Color.parseColor("#D92D20")) : textMuted);
+        }
+
+        // Full Bench Inventory Panel Styling
+        if (cardAllBenches != null) {
+            cardAllBenches.setCardBackgroundColor(bgCard);
+            cardAllBenches.setStrokeColor(borderCard);
+        }
+        if (tvAllBenchesTitle != null) tvAllBenchesTitle.setTextColor(textPrimary);
+        if (tvAllBenchesSubtitle != null) tvAllBenchesSubtitle.setTextColor(textMuted);
+        if (dividerAllBenches != null) dividerAllBenches.setBackgroundColor(borderCard);
+        if (btnCloseAllBenches != null) btnCloseAllBenches.setImageTintList(ColorStateList.valueOf(textMuted));
+        if (btnClearAllBenchesSearch != null) btnClearAllBenchesSearch.setImageTintList(ColorStateList.valueOf(textMuted));
+        if (etSearchAllBenches != null) {
+            etSearchAllBenches.setTextColor(textPrimary);
+            etSearchAllBenches.setHintTextColor(textMuted);
+        }
+        if (layoutSearchBenchesBox != null) {
+            GradientDrawable boxDrawable = new GradientDrawable();
+            boxDrawable.setCornerRadius(12f * d);
+            boxDrawable.setColor(chipBg);
+            boxDrawable.setStroke((int) (1f * d), borderCard);
+            layoutSearchBenchesBox.setBackground(boxDrawable);
+        }
+        if (tvAllBenchesCountBadge != null) {
+            tvAllBenchesCountBadge.setTextColor(textMuted);
+        }
+        updateSortPillStyles();
+        if (allBenchesAdapter != null) {
+            allBenchesAdapter.setDarkMode(darkMode);
         }
         if (btnThemeToggle != null) {
             btnThemeToggle.setImageResource(darkMode ? R.drawable.ic_theme_sun : R.drawable.ic_theme_moon);
@@ -663,6 +770,181 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 clearMeetupMode();
             });
         }
+
+        // Top Header Actions
+        if (layoutCounterBadge != null) {
+            layoutCounterBadge.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE) {
+                    hideAllBenchesPanel();
+                } else {
+                    showAllBenchesPanel();
+                }
+            });
+        }
+
+        // Full Bench Inventory Panel Listeners
+        if (btnCloseAllBenches != null) {
+            btnCloseAllBenches.setOnClickListener(v -> {
+                triggerHapticTick();
+                hideAllBenchesPanel();
+            });
+        }
+
+        if (btnClearAllBenchesSearch != null) {
+            btnClearAllBenchesSearch.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (etSearchAllBenches != null) {
+                    etSearchAllBenches.setText("");
+                }
+            });
+        }
+
+        if (etSearchAllBenches != null) {
+            etSearchAllBenches.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (allBenchesAdapter != null) {
+                        allBenchesAdapter.filter(s != null ? s.toString() : "");
+                        updateAllBenchesCount();
+                    }
+                    if (btnClearAllBenchesSearch != null) {
+                        btnClearAllBenchesSearch.setVisibility(s != null && s.length() > 0 ? View.VISIBLE : View.GONE);
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        if (btnSortProximity != null) {
+            btnSortProximity.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (allBenchesAdapter != null) {
+                    allBenchesAdapter.setSortMode(AllBenchesAdapter.SortMode.PROXIMITY);
+                    updateSortPillStyles();
+                }
+            });
+        }
+
+        if (btnSortBorough != null) {
+            btnSortBorough.setOnClickListener(v -> {
+                triggerHapticTick();
+                if (allBenchesAdapter != null) {
+                    allBenchesAdapter.setSortMode(AllBenchesAdapter.SortMode.BOROUGH);
+                    updateSortPillStyles();
+                }
+            });
+        }
+
+        // Consume clicks on header bar to prevent touch pass-through to underlying map
+        if (layoutHeader != null) {
+            layoutHeader.setOnClickListener(v -> {});
+        }
+        if (cardHeader != null) {
+            cardHeader.setOnClickListener(v -> {});
+        }
+    }
+
+    private void showAllBenchesPanel() {
+        if (cardAllBenches == null) return;
+        if (currentlySelectedBench != null) {
+            benchMapView.deselectBench();
+        }
+
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null && getCurrentFocus() != null) {
+            imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+        }
+
+        double refLat = (lastLocation != null) ? lastLocation.getLatitude() : benchMapView.getCenterLat();
+        double refLon = (lastLocation != null) ? lastLocation.getLongitude() : benchMapView.getCenterLon();
+
+        List<Bench> benches = benchMapView.getAllBenches();
+        if (allBenchesAdapter != null) {
+            allBenchesAdapter.setBenches(benches, refLat, refLon);
+        }
+        updateAllBenchesCount();
+
+        cardAllBenches.setVisibility(View.VISIBLE);
+        cardAllBenches.setAlpha(0f);
+        cardAllBenches.setTranslationY(-20f);
+        cardAllBenches.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(220)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+
+        if (tvCounterChevron != null) {
+            tvCounterChevron.setText(" ▴");
+        }
+        applyTheme(isDarkMode);
+    }
+
+    private void hideAllBenchesPanel() {
+        if (cardAllBenches == null || cardAllBenches.getVisibility() != View.VISIBLE) return;
+
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null && etSearchAllBenches != null) {
+            imm.hideSoftInputFromWindow(etSearchAllBenches.getWindowToken(), 0);
+        }
+
+        cardAllBenches.animate()
+                .alpha(0f)
+                .translationY(-20f)
+                .setDuration(180)
+                .setInterpolator(new AccelerateInterpolator())
+                .withEndAction(() -> {
+                    cardAllBenches.setVisibility(View.GONE);
+                    if (tvCounterChevron != null) {
+                        tvCounterChevron.setText(" ▾");
+                    }
+                    applyTheme(isDarkMode);
+                })
+                .start();
+    }
+
+    private void updateSortPillStyles() {
+        if (btnSortProximity == null || btnSortBorough == null) return;
+        boolean isProx = (allBenchesAdapter == null || allBenchesAdapter.getSortMode() == AllBenchesAdapter.SortMode.PROXIMITY);
+
+        int activeBg = isDarkMode ? Color.parseColor("#F4F5F7") : Color.parseColor("#111318");
+        int activeText = isDarkMode ? Color.parseColor("#111318") : Color.parseColor("#FFFFFF");
+        int inactiveBg = isDarkMode ? Color.parseColor("#20232B") : Color.parseColor("#F2F4F7");
+        int inactiveText = isDarkMode ? Color.parseColor("#8E93A0") : Color.parseColor("#667085");
+        int borderC = isDarkMode ? Color.parseColor("#2C303B") : Color.parseColor("#E4E7EC");
+
+        if (isProx) {
+            btnSortProximity.setBackgroundColor(activeBg);
+            btnSortProximity.setTextColor(activeText);
+            btnSortProximity.setStrokeColor(ColorStateList.valueOf(activeBg));
+
+            btnSortBorough.setBackgroundColor(inactiveBg);
+            btnSortBorough.setTextColor(inactiveText);
+            btnSortBorough.setStrokeColor(ColorStateList.valueOf(borderC));
+        } else {
+            btnSortProximity.setBackgroundColor(inactiveBg);
+            btnSortProximity.setTextColor(inactiveText);
+            btnSortProximity.setStrokeColor(ColorStateList.valueOf(borderC));
+
+            btnSortBorough.setBackgroundColor(activeBg);
+            btnSortBorough.setTextColor(activeText);
+            btnSortBorough.setStrokeColor(ColorStateList.valueOf(activeBg));
+        }
+    }
+
+    private void updateAllBenchesCount() {
+        if (allBenchesAdapter == null || tvAllBenchesCountBadge == null) return;
+        int count = allBenchesAdapter.getDisplayedCount();
+        tvAllBenchesCountBadge.setText(String.format(Locale.FRENCH, "%,d bancs", count).replace(',', ' '));
+        if (layoutAllBenchesEmpty != null) {
+            layoutAllBenchesEmpty.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
@@ -670,6 +952,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         runOnUiThread(() -> {
             String formatted = String.format(Locale.CANADA_FRENCH, "%,d BANCS", totalBenches).replace(',', ' ');
             tvBenchCounter.setText(formatted);
+            if (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE && allBenchesAdapter != null) {
+                double refLat = (lastLocation != null) ? lastLocation.getLatitude() : benchMapView.getCenterLat();
+                double refLon = (lastLocation != null) ? lastLocation.getLongitude() : benchMapView.getCenterLon();
+                allBenchesAdapter.setBenches(benchMapView.getAllBenches(), refLat, refLon);
+                updateAllBenchesCount();
+            }
         });
     }
 
