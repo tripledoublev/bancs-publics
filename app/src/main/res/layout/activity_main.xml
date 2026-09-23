@@ -11,7 +11,239 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- 2. Top Swiss Minimalist Header -->
+    <!-- 2. Full Bench Inventory Panel (Swiss Minimalist Sheet Overlay) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_all_benches"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        app:cardBackgroundColor="@color/bg_card"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="6dp"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- Panel Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="10dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tv_all_benches_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="INVENTAIRE DES BANCS"
+                        android:textColor="@color/swiss_black"
+                        android:textSize="14sp"
+                        android:letterSpacing="0.04"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium" />
+
+                    <TextView
+                        android:id="@+id/tv_all_benches_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="9 602 bancs • Île de Montréal"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11.5sp"
+                        android:layout_marginTop="1dp" />
+                </LinearLayout>
+
+                <!-- Close button -->
+                <ImageView
+                    android:id="@+id/btn_close_all_benches"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:padding="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:contentDescription="Fermer l'inventaire"
+                    app:tint="@color/text_muted" />
+            </LinearLayout>
+
+            <!-- Search input bar -->
+            <LinearLayout
+                android:id="@+id/layout_search_benches_box"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_search_input"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@android:drawable/ic_menu_search"
+                    app:tint="@color/text_muted"
+                    android:contentDescription="Rechercher" />
+
+                <EditText
+                    android:id="@+id/et_search_all_benches"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@null"
+                    android:hint="Rechercher rue, parc, quartier..."
+                    android:textSize="12.5sp"
+                    android:textColor="@color/swiss_black"
+                    android:textColorHint="@color/text_muted"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:imeOptions="actionDone" />
+
+                <ImageView
+                    android:id="@+id/btn_clear_all_benches_search"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:padding="5dp"
+                    android:visibility="gone"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:contentDescription="Effacer la recherche"
+                    app:tint="@color/text_muted" />
+            </LinearLayout>
+
+            <!-- Sort Toggle Pills Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_sort_proximity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="📍 PROXIMITÉ"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    app:cornerRadius="17dp"
+                    android:layout_marginEnd="8dp"
+                    app:elevation="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_sort_borough"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="🏛 QUARTIER"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.03"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="0dp"
+                    android:paddingBottom="0dp"
+                    app:cornerRadius="17dp"
+                    app:elevation="0dp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tv_all_benches_count_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="9 602"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <!-- Subtle Divider -->
+            <View
+                android:id="@+id/divider_all_benches"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/card_border" />
+
+            <!-- RecyclerView of all benches -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_all_benches"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:scrollbars="vertical"
+                android:overScrollMode="never"
+                android:clipToPadding="false"
+                android:paddingTop="4dp"
+                android:paddingBottom="16dp" />
+
+            <!-- Empty State -->
+            <LinearLayout
+                android:id="@+id/layout_all_benches_empty"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:padding="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔍"
+                    android:textSize="32sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Aucun banc trouvé"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/swiss_black"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Essayez un autre nom de rue, parc ou quartier"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 3. Top Swiss Minimalist Header -->
     <LinearLayout
         android:id="@+id/layout_header"
         android:layout_width="match_parent"
@@ -20,6 +252,8 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="0dp"
+        android:clickable="true"
+        android:focusable="true"
         android:clipToPadding="false">
 
         <!-- Clean Swiss Title Card -->
@@ -27,6 +261,8 @@
             android:id="@+id/card_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
             app:cardBackgroundColor="@color/bg_card"
             app:cardCornerRadius="14dp"
             app:cardElevation="1dp"
@@ -38,7 +274,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="14dp"
+                android:paddingStart="12dp"
                 android:paddingEnd="10dp"
                 android:paddingTop="10dp"
                 android:paddingBottom="10dp">
@@ -50,9 +286,12 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
                     android:background="@drawable/bg_chip_counter"
                     android:paddingStart="10dp"
-                    android:paddingEnd="12dp"
+                    android:paddingEnd="10dp"
                     android:paddingTop="6dp"
                     android:paddingBottom="6dp">
 
@@ -60,7 +299,7 @@
                         android:layout_width="7dp"
                         android:layout_height="7dp"
                         android:background="@drawable/dot_swiss"
-                        android:layout_marginEnd="8dp" />
+                        android:layout_marginEnd="7dp" />
 
                     <TextView
                         android:id="@+id/tv_bench_counter"
@@ -72,6 +311,15 @@
                         android:letterSpacing="0.05"
                         android:textStyle="bold"
                         android:fontFamily="sans-serif-medium" />
+
+                    <TextView
+                        android:id="@+id/tv_counter_chevron"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" ▾"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
                 <!-- Spacer pushing action controls cleanly to the right -->
@@ -80,12 +328,12 @@
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
-                <!-- Action icons cluster -->
+                <!-- Action icons cluster with generous touch targets -->
                 <ImageView
                     android:id="@+id/btn_map_style"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Styles de rendu cartographique"
                     android:padding="7dp"
@@ -95,7 +343,7 @@
                     android:id="@+id/btn_collections"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mes collections de bancs"
                     android:padding="7dp"
@@ -105,7 +353,7 @@
                     android:id="@+id/btn_meetup"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Trouvez un banc entre les deux"
                     android:padding="7dp"
@@ -115,7 +363,7 @@
                     android:id="@+id/btn_theme_toggle"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Mode sombre"
                     android:padding="7dp"
@@ -125,10 +373,10 @@
                     android:id="@+id/btn_compass"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Boussole et orientation Nord"
-                    android:padding="5dp" />
+                    android:padding="4dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

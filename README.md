@@ -14,11 +14,16 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
 ## Features / Fonctionnalités
 
 - **100% Offline Vector Rendering**: Custom Canvas engine rendering authentic physical island shorelines (Île de Montréal, Île des Sœurs, Île Sainte-Hélène, Île Notre-Dame, Île Bizard, Île de la Visitation), 1,648 municipal parks, 29,708 street segments, and 9,602 benches via OpenGL `drawLines` hardware batching.
-- **🧭 Boussole Suisse Intégrée au Bandeau**:
-  - Intégrée avec précision comme **dernière icône à droite** du bandeau de navigation supérieur.
-  - Aiguille bicolore dynamique (Rouge suisse `#E52B35` / `#FF383C` pour le Nord, Ardoise `#94A3B8` / `#64748B` pour le Sud) pivotant en temps réel au rythme de la rotation de la carte.
-  - **Réalignement True North** : Un simple tap sur la boussole réinitialise l'orientation au Nord avec animation fluide et zoom avant d'exploration.
-  - Libère 100 % de l'espace sur le canvas cartographique pour une clarté visuelle totale.
+- **📋 Inventaire Exhaustif des 9 602 Bancs Publics**:
+  - Un simple tap sur le badge **« 9 602 BANCS ▾ »** déploie la liste complète de tous les bancs publics de l'Île de Montréal.
+  - **Tri dynamique** : par **Proximité** (distance en mètres/km par rapport à votre position ou au centre de la carte) ou par **Quartier** (ordre alphabétique des arrondissements et parcs).
+  - **Recherche textuelle ultra-rapide** : Indexation instantanée avec normalisation des accents et caractères spéciaux (ex: taper *"lafontaine"* trouve immédiatement *"Parc La Fontaine"*).
+  - **Navigation directe en un tap** : Cliquer sur un banc ferme la liste, centre la carte avec animation fluide et ouvre sa fiche technique.
+- **🧭 Boussole Suisse Épurée & Bandeau Supérieur Ergonomique**:
+  - Aiguille bicolore minimaliste intégrée comme dernière icône du bandeau (Rouge suisse `#E52B35` pour le Nord, Ardoise pour le Sud).
+  - **Réalignement True North** instantané d'un tap.
+  - **Espacement ergonomique optimisé** entre les icônes d'action pour une sélection sans erreur tactile.
+  - **Isolation tactile totale** : Le bandeau absorbe tous les gestes et clics, éliminant tout déclenchement intempestif de bancs sous-jacents sur la carte.
 - **🔍 Moteur de Recherche d'Adresses Civiques & Lieux**:
   - Recherche instantanée par adresse municipale exacte (géocodage local & `Geocoder` Android, ex: *« 3450 Saint-Urbain »*).
   - Index pré-chargé des quartiers montréalais (*Plateau-Mont-Royal, Mile End, Vieux-Montréal, Griffintown, Petite Italie, Verdun, Hochelaga...*) et lieux d'intérêt (*Belvédère Mont-Royal, Oratoire Saint-Joseph, Marché Jean-Talon, Place des Arts, Parc La Fontaine...*).
@@ -56,27 +61,22 @@ A 100% local-first, privacy-respecting, native vector map of all **9,602 public 
   - **Nocturne (Dark / OLED)**: True pitch-black oceanic water, matte obsidian slate landmass, and high-contrast chalk platinum / luminous mint emerald dots.
 - **Every Bench Linked to Street & Park**: Spatial matching connects every bench to its actual street name (e.g., *Rue du Centre*, *Rue Wellington*, *Boulevard Saint-Laurent*) and park name.
 - **Smart Discovery**:
-  - 🎲 **Au hasard (Random Bench)**: Jump to any surprising bench on the island.
-  - 🧭 **Le plus proche (Nearest Bench)**: Instant Euclidean k-NN search to locate your closest seat.
-  - 📍 **Turn-by-turn Walking Directions**: One-tap intent to start pedestrian navigation in OsmAnd, Organic Maps, or Google Maps.
-  - ↗ **Share Coordinates**: Clean card formatting to share meeting points.
+  🎲 **Au hasard (Random Bench)**, 🧭 **Le plus proche (Nearest Bench)**, 📍 **Itinéraire piéton (Walking Directions)**, ↗ **Partager coordonnées (Share)**.
 - **🤝 Rendez-vous à mi-chemin (Local & Anonymous Social Meetup)**:
-  - **Zero-Cloud Location Keys**: Friends export/import an obfuscated, scrambled token (e.g. `BM1-7K9P-X4W2-9D`) via Signal, WhatsApp, or SMS with **zero servers, zero accounts, and zero cloud tracking**.
-  - **Privacy Blur Levels**: Choose exact coordinates, subtle ~150 m street blur, or ~300 m neighborhood blur to protect home address privacy.
-  - **Fair Halfway Filtering**: Mathematical fairness algorithm finds candidate benches located at the exact halfway midpoint between both friends, minimizing walking time disparity.
-  - **Interactive Meetup Mode**: Live geodesic connecting axis, Cobalt Blue friend pin, glowing amber candidate halos, and real-time travel comparison (`Vous: 1,4 km • Ami: 1,4 km (Écart: 20 m)`).
+  - **Zero-Cloud Location Keys**: Partage d'une clé de position décentralisée (ex: `BM1-CQ99-69GQ-4QWN0`) via Signal, WhatsApp ou SMS avec **zéro serveur, zéro compte et zéro pistage**.
+  - **Flou de confidentialité** : Coordonnées exactes, flou rue (~150 m) ou flou quartier (~300 m).
+  - **Équité mathématique** : Calcul instantané du banc situé au point médian entre les deux personnes.
 - **🔍 Zoom Haute Précision Sub-Métrique**:
-  - Niveau de zoom poussé jusqu'à une échelle de 65 000 000 (~70 m d'envergure d'écran) permettant de distinguer l'emplacement exact de chaque banc par rapport aux allées et trottoirs.
-- **100% Local & Sécurisé**: Données et photos stockées exclusivement en local sur l'appareil (`collections.json` et `bench_photos/`). Aucun serveur, aucun pistage.
-- **100% Private & Open Source**: No tracking, no analytics, no ads, no cloud accounts, and no Google Play Services dependencies.
+  - Échelle jusqu'à 65 000 000 (~70 m) pour voir la disposition exacte des bancs dans les parcs et places publiques.
+- **100% Local, Privé & Open Source**: Zéro traçage, zéro publicité, zéro compte cloud, zéro dépendance Google Play Services.
 
 ---
 
 ## Screenshots / Aperçus
 
-| Mode Clair (Nordic Paper) | Mode Sombre (Nocturne OLED) | Visualiseur Plein Écran |
-| :---: | :---: | :---: |
-| <img src="screenshot_light_mode.png" width="280" /> | <img src="screenshot_dark_mode.png" width="280" /> | <img src="screenshot_photo_viewer.png" width="280" /> |
+| Mode Clair (Nordic Paper) | Mode Sombre (Nocturne OLED) | Inventaire des 9 602 Bancs | Visualiseur Plein Écran |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshot_light_mode.png" width="220" /> | <img src="screenshot_dark_mode.png" width="220" /> | <img src="screenshot_all_benches.png" width="220" /> | <img src="screenshot_photo_viewer.png" width="220" /> |
 
 ---
 
