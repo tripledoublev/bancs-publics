@@ -132,9 +132,9 @@ public class MontrealBenchMapView extends View {
             boolean isDotted = (style == MapRenderStyle.DOTTED_MATRIX);
             boolean isBrush = (style == MapRenderStyle.ARTISTIC_BRUSH);
 
-            float dashLen = 9f * density;
-            float gapLen = 6f * density;
-            float dotStep = 7.5f * density;
+            float dashLen = 5.5f * density;
+            float gapLen = 3.8f * density;
+            float dotStep = 4.8f * density;
 
             for (int r = r0; r <= r1; r++) {
                 for (int c = c0; c <= c1; c++) {
@@ -165,14 +165,16 @@ public class MontrealBenchMapView extends View {
                                 float dy = y1 - y0;
                                 float len = (float) Math.hypot(dx, dy);
                                 if (len <= dashLen + gapLen) {
-                                    if (bufIdx + 4 > maxCap) {
-                                        canvas.drawLines(lineBuffer, 0, bufIdx, paint);
-                                        bufIdx = 0;
+                                    if (len > gapLen * 0.7f) {
+                                        if (bufIdx + 4 > maxCap) {
+                                            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
+                                            bufIdx = 0;
+                                        }
+                                        lineBuffer[bufIdx++] = x0;
+                                        lineBuffer[bufIdx++] = y0;
+                                        lineBuffer[bufIdx++] = x0 + dx * 0.65f;
+                                        lineBuffer[bufIdx++] = y0 + dy * 0.65f;
                                     }
-                                    lineBuffer[bufIdx++] = x0;
-                                    lineBuffer[bufIdx++] = y0;
-                                    lineBuffer[bufIdx++] = x1;
-                                    lineBuffer[bufIdx++] = y1;
                                 } else {
                                     float nx = dx / len;
                                     float ny = dy / len;
@@ -194,35 +196,24 @@ public class MontrealBenchMapView extends View {
                                 float dx = x1 - x0;
                                 float dy = y1 - y0;
                                 float len = (float) Math.hypot(dx, dy);
-                                if (len <= dotStep) {
+                                float nx = (len > 0.001f) ? (dx / len) : 0f;
+                                float ny = (len > 0.001f) ? (dy / len) : 0f;
+                                float t = 0f;
+                                while (t <= len) {
                                     if (bufIdx + 4 > maxCap) {
                                         canvas.drawLines(lineBuffer, 0, bufIdx, paint);
                                         bufIdx = 0;
                                     }
-                                    lineBuffer[bufIdx++] = x0;
-                                    lineBuffer[bufIdx++] = y0;
-                                    lineBuffer[bufIdx++] = x0;
-                                    lineBuffer[bufIdx++] = y0;
-                                } else {
-                                    float nx = dx / len;
-                                    float ny = dy / len;
-                                    float t = 0f;
-                                    while (t <= len) {
-                                        if (bufIdx + 4 > maxCap) {
-                                            canvas.drawLines(lineBuffer, 0, bufIdx, paint);
-                                            bufIdx = 0;
-                                        }
-                                        float px = x0 + nx * t;
-                                        float py = y0 + ny * t;
-                                        lineBuffer[bufIdx++] = px;
-                                        lineBuffer[bufIdx++] = py;
-                                        lineBuffer[bufIdx++] = px;
-                                        lineBuffer[bufIdx++] = py;
-                                        t += dotStep;
-                                    }
+                                    float px = x0 + nx * t;
+                                    float py = y0 + ny * t;
+                                    lineBuffer[bufIdx++] = px;
+                                    lineBuffer[bufIdx++] = py;
+                                    lineBuffer[bufIdx++] = px;
+                                    lineBuffer[bufIdx++] = py;
+                                    t += dotStep;
                                 }
                             } else if (isBrush) {
-                                float jitter = ((float) Math.sin(coords[j] * 20000.0 + coords[j + 1] * 20000.0)) * 0.75f * density;
+                                float jitter = ((float) (Math.sin(coords[j] * 32000.0) * 1.8 + Math.cos(coords[j + 1] * 24000.0) * 1.4)) * density;
                                 if (bufIdx + 4 > maxCap) {
                                     canvas.drawLines(lineBuffer, 0, bufIdx, paint);
                                     bufIdx = 0;
@@ -714,70 +705,172 @@ public class MontrealBenchMapView extends View {
 
         switch (style) {
             case THIN_ARCHITECTURAL:
-                paintShoreline.setStrokeWidth(0.65f * density);
-                paintParkBorder.setStrokeWidth(0.45f * density);
+                paintShoreline.setStrokeWidth(0.5f * density);
+                paintParkBorder.setStrokeWidth(0.35f * density);
+                paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+                paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
+                if (isDarkMode) {
+                    paintShoreline.setColor(Color.parseColor("#334155"));
+                    paintPark.setColor(Color.parseColor("#101B15"));
+                    paintParkBorder.setColor(Color.parseColor("#1E3A2B"));
+                    paintStreetMajor.setColor(Color.parseColor("#64748B"));
+                    paintStreetMinor.setColor(Color.parseColor("#334155"));
+                    paintLand.setColor(Color.parseColor("#0D1117"));
+                } else {
+                    paintShoreline.setColor(Color.parseColor("#B0B9C4"));
+                    paintPark.setColor(Color.parseColor("#EDF6F0"));
+                    paintParkBorder.setColor(Color.parseColor("#9CBFA5"));
+                    paintStreetMajor.setColor(Color.parseColor("#475569"));
+                    paintStreetMinor.setColor(Color.parseColor("#94A3B8"));
+                    paintLand.setColor(Color.parseColor("#FDFDFE"));
+                }
                 break;
 
             case BOLD_BAUHAUS:
-                paintShoreline.setStrokeWidth(2.8f * density);
-                paintParkBorder.setStrokeWidth(1.6f * density);
+                paintShoreline.setStrokeWidth(5.0f * density);
+                paintParkBorder.setStrokeWidth(3.2f * density);
+                paintStreetMajor.setStrokeCap(Paint.Cap.SQUARE);
+                paintStreetMinor.setStrokeCap(Paint.Cap.SQUARE);
+                if (isDarkMode) {
+                    paintShoreline.setColor(Color.parseColor("#F1F5F9"));
+                    paintPark.setColor(Color.parseColor("#0A2B18"));
+                    paintParkBorder.setColor(Color.parseColor("#22C55E"));
+                    paintStreetMajor.setColor(Color.parseColor("#FFFFFF"));
+                    paintStreetMinor.setColor(Color.parseColor("#CBD5E1"));
+                    paintLand.setColor(Color.parseColor("#0C0D10"));
+                } else {
+                    paintShoreline.setColor(Color.parseColor("#0A0A0C"));
+                    paintPark.setColor(Color.parseColor("#C6E7CD"));
+                    paintParkBorder.setColor(Color.parseColor("#1B4328"));
+                    paintStreetMajor.setColor(Color.parseColor("#0A0A0C"));
+                    paintStreetMinor.setColor(Color.parseColor("#2B2D33"));
+                    paintLand.setColor(Color.parseColor("#FBFBFC"));
+                }
                 break;
 
             case DASHED_CADASTRAL:
-                paintShoreline.setStrokeWidth(1.2f * density);
+                paintShoreline.setStrokeWidth(1.8f * density);
                 paintShoreline.setPathEffect(effectDashedShoreline);
-                paintParkBorder.setStrokeWidth(0.9f * density);
+                paintParkBorder.setStrokeWidth(1.2f * density);
                 paintParkBorder.setPathEffect(effectDashedPark);
+                paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+                paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
+                if (isDarkMode) {
+                    paintLand.setColor(Color.parseColor("#141311"));
+                    paintShoreline.setColor(Color.parseColor("#A8A29E"));
+                    paintPark.setColor(Color.parseColor("#152219"));
+                    paintParkBorder.setColor(Color.parseColor("#385842"));
+                    paintStreetMajor.setColor(Color.parseColor("#D6D3D1"));
+                    paintStreetMinor.setColor(Color.parseColor("#78716C"));
+                } else {
+                    paintLand.setColor(Color.parseColor("#F7F5EE"));
+                    paintShoreline.setColor(Color.parseColor("#78716C"));
+                    paintPark.setColor(Color.parseColor("#E3ECE4"));
+                    paintParkBorder.setColor(Color.parseColor("#84A98C"));
+                    paintStreetMajor.setColor(Color.parseColor("#44403C"));
+                    paintStreetMinor.setColor(Color.parseColor("#78716C"));
+                }
                 break;
 
             case DOTTED_MATRIX:
-                paintShoreline.setStrokeWidth(2.2f * density);
+                paintShoreline.setStrokeWidth(3.2f * density);
                 paintShoreline.setStrokeCap(Paint.Cap.ROUND);
                 paintShoreline.setPathEffect(effectDottedShoreline);
-                paintParkBorder.setStrokeWidth(1.8f * density);
+                paintParkBorder.setStrokeWidth(2.4f * density);
                 paintParkBorder.setStrokeCap(Paint.Cap.ROUND);
                 paintParkBorder.setPathEffect(effectDottedPark);
                 paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
                 paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
+                if (isDarkMode) {
+                    paintLand.setColor(Color.parseColor("#0B0F14"));
+                    paintShoreline.setColor(Color.parseColor("#38BDF8"));
+                    paintPark.setColor(Color.parseColor("#062417"));
+                    paintParkBorder.setColor(Color.parseColor("#10B981"));
+                    paintStreetMajor.setColor(Color.parseColor("#2DD4BF"));
+                    paintStreetMinor.setColor(Color.parseColor("#0D9488"));
+                } else {
+                    paintLand.setColor(Color.parseColor("#F1F5F9"));
+                    paintShoreline.setColor(Color.parseColor("#0F172A"));
+                    paintPark.setColor(Color.parseColor("#DCFCE7"));
+                    paintParkBorder.setColor(Color.parseColor("#16A34A"));
+                    paintStreetMajor.setColor(Color.parseColor("#0F172A"));
+                    paintStreetMinor.setColor(Color.parseColor("#475569"));
+                }
                 break;
 
             case ARTISTIC_BRUSH:
-                paintShoreline.setStrokeWidth(1.8f * density);
+                paintShoreline.setStrokeWidth(2.4f * density);
                 paintShoreline.setStrokeCap(Paint.Cap.ROUND);
                 paintShoreline.setPathEffect(effectBrushShoreline);
-                paintParkBorder.setStrokeWidth(1.2f * density);
+                paintParkBorder.setStrokeWidth(1.6f * density);
                 paintParkBorder.setStrokeCap(Paint.Cap.ROUND);
                 paintParkBorder.setPathEffect(effectBrushPark);
                 paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
                 paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
+                if (isDarkMode) {
+                    paintLand.setColor(Color.parseColor("#141312"));
+                    paintShoreline.setColor(Color.parseColor("#A8A29E"));
+                    paintPark.setColor(Color.parseColor("#162319"));
+                    paintParkBorder.setColor(Color.parseColor("#44694E"));
+                    paintStreetMajor.setColor(Color.parseColor("#E7E5E4"));
+                    paintStreetMinor.setColor(Color.parseColor("#A8A29E"));
+                } else {
+                    paintLand.setColor(Color.parseColor("#FAF7F0"));
+                    paintShoreline.setColor(Color.parseColor("#57534E"));
+                    paintPark.setColor(Color.parseColor("#DDE7DC"));
+                    paintParkBorder.setColor(Color.parseColor("#6B8A70"));
+                    paintStreetMajor.setColor(Color.parseColor("#292524"));
+                    paintStreetMinor.setColor(Color.parseColor("#57534E"));
+                }
                 break;
 
             case DOUBLE_CASING:
-                paintShoreline.setStrokeWidth(1.2f * density);
-                paintParkBorder.setStrokeWidth(0.85f * density);
+                paintShoreline.setStrokeWidth(1.5f * density);
+                paintParkBorder.setStrokeWidth(1.0f * density);
+                paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+                paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
+                if (isDarkMode) {
+                    paintLand.setColor(Color.parseColor("#0F141C"));
+                    paintShoreline.setColor(Color.parseColor("#334155"));
+                    paintPark.setColor(Color.parseColor("#0B2419"));
+                    paintParkBorder.setColor(Color.parseColor("#15803D"));
+                    paintStreetMajor.setColor(Color.parseColor("#94A3B8"));
+                    paintStreetCasingCore.setColor(Color.parseColor("#0F141C"));
+                    paintStreetMinor.setColor(Color.parseColor("#475569"));
+                } else {
+                    paintLand.setColor(Color.parseColor("#FAFBFD"));
+                    paintShoreline.setColor(Color.parseColor("#334155"));
+                    paintPark.setColor(Color.parseColor("#E0EFE5"));
+                    paintParkBorder.setColor(Color.parseColor("#3B6E47"));
+                    paintStreetMajor.setColor(Color.parseColor("#1E293B"));
+                    paintStreetCasingCore.setColor(Color.parseColor("#FAFBFD"));
+                    paintStreetMinor.setColor(Color.parseColor("#64748B"));
+                }
                 break;
 
             case DESATURATED_NOIR:
-                paintShoreline.setStrokeWidth(1.1f * density);
-                paintParkBorder.setStrokeWidth(0.75f * density);
+                paintShoreline.setStrokeWidth(1.8f * density);
+                paintParkBorder.setStrokeWidth(1.0f * density);
+                paintStreetMajor.setStrokeCap(Paint.Cap.BUTT);
+                paintStreetMinor.setStrokeCap(Paint.Cap.BUTT);
                 if (isDarkMode) {
-                    paintLand.setColor(Color.parseColor("#121214"));
-                    paintShoreline.setColor(Color.parseColor("#323238"));
+                    paintLand.setColor(Color.parseColor("#09090B"));
+                    paintShoreline.setColor(Color.parseColor("#FFFFFF"));
                     paintPark.setColor(Color.parseColor("#18181B"));
-                    paintParkBorder.setColor(Color.parseColor("#27272A"));
-                    paintStreetMajor.setColor(Color.parseColor("#71717A"));
-                    paintStreetMinor.setColor(Color.parseColor("#2E2E33"));
-                    paintBenchStreet.setColor(Color.parseColor("#E4E4E7"));
-                    paintBenchPark.setColor(Color.parseColor("#D4D4D8"));
+                    paintParkBorder.setColor(Color.parseColor("#52525B"));
+                    paintStreetMajor.setColor(Color.parseColor("#FFFFFF"));
+                    paintStreetMinor.setColor(Color.parseColor("#71717A"));
+                    paintBenchStreet.setColor(Color.parseColor("#FF453A"));
+                    paintBenchPark.setColor(Color.parseColor("#FF453A"));
                 } else {
-                    paintLand.setColor(Color.parseColor("#FAFAFA"));
-                    paintShoreline.setColor(Color.parseColor("#D4D4D8"));
-                    paintPark.setColor(Color.parseColor("#F0F0F2"));
-                    paintParkBorder.setColor(Color.parseColor("#E4E4E7"));
-                    paintStreetMajor.setColor(Color.parseColor("#52525B"));
-                    paintStreetMinor.setColor(Color.parseColor("#A1A1AA"));
-                    paintBenchStreet.setColor(Color.parseColor("#18181B"));
-                    paintBenchPark.setColor(Color.parseColor("#27272A"));
+                    paintLand.setColor(Color.parseColor("#FFFFFF"));
+                    paintShoreline.setColor(Color.parseColor("#000000"));
+                    paintPark.setColor(Color.parseColor("#E4E4E7"));
+                    paintParkBorder.setColor(Color.parseColor("#18181B"));
+                    paintStreetMajor.setColor(Color.parseColor("#000000"));
+                    paintStreetMinor.setColor(Color.parseColor("#52525B"));
+                    paintBenchStreet.setColor(Color.parseColor("#E52B35"));
+                    paintBenchPark.setColor(Color.parseColor("#E52B35"));
                 }
                 break;
 
@@ -1492,6 +1585,48 @@ public class MontrealBenchMapView extends View {
         invalidate();
     }
 
+    private int getWaterColor(MapRenderStyle style, boolean isDarkMode) {
+        if (isDarkMode) {
+            switch (style) {
+                case THIN_ARCHITECTURAL:
+                    return Color.parseColor("#070A0F");
+                case DASHED_CADASTRAL:
+                    return Color.parseColor("#080B10");
+                case DOTTED_MATRIX:
+                    return Color.parseColor("#05080E");
+                case ARTISTIC_BRUSH:
+                    return Color.parseColor("#100F0D");
+                case DOUBLE_CASING:
+                    return Color.parseColor("#05070A");
+                case BOLD_BAUHAUS:
+                case DESATURATED_NOIR:
+                case SWISS_CLEAN:
+                default:
+                    return DARK_WATER;
+            }
+        } else {
+            switch (style) {
+                case THIN_ARCHITECTURAL:
+                    return Color.parseColor("#F0F4F8");
+                case BOLD_BAUHAUS:
+                    return Color.parseColor("#DCE2E8");
+                case DASHED_CADASTRAL:
+                    return Color.parseColor("#E8EEF5");
+                case DOTTED_MATRIX:
+                    return Color.parseColor("#E2E8F0");
+                case ARTISTIC_BRUSH:
+                    return Color.parseColor("#ECE5DA");
+                case DOUBLE_CASING:
+                    return Color.parseColor("#DCE5EE");
+                case DESATURATED_NOIR:
+                    return Color.parseColor("#E4E4E7");
+                case SWISS_CLEAN:
+                default:
+                    return LIGHT_WATER;
+            }
+        }
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -1499,8 +1634,10 @@ public class MontrealBenchMapView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        MapRenderStyle activeStyle = getActiveEffectiveStyle();
+
         // 1. Water Canvas Background
-        canvas.drawColor(isDarkMode ? DARK_WATER : LIGHT_WATER);
+        canvas.drawColor(getWaterColor(activeStyle, isDarkMode));
 
         float halfW = w * 0.5f;
         float halfH = h * 0.5f;
@@ -1559,21 +1696,29 @@ public class MontrealBenchMapView extends View {
 
             // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
             // Clutter-free island overview: only reveal minor streets when zooming into neighbourhoods
-            MapRenderStyle activeStyle = getActiveEffectiveStyle();
-
-            // 4. Minor Streets (Spatially indexed batch lines at neighbourhood zoom)
-            // Clutter-free island overview: only reveal minor streets when zooming into neighbourhoods
             if (sc > 340000f && minorGrid != null) {
                 float minorWidth;
                 switch (activeStyle) {
                     case THIN_ARCHITECTURAL:
-                        minorWidth = (sc > 3000000f) ? (1.0f * density) : ((sc > 800000f) ? (0.6f * density) : (0.4f * density));
+                        minorWidth = (sc > 3000000f) ? (0.7f * density) : ((sc > 800000f) ? (0.42f * density) : (0.28f * density));
                         break;
                     case BOLD_BAUHAUS:
-                        minorWidth = (sc > 3000000f) ? (2.8f * density) : ((sc > 800000f) ? (1.8f * density) : (1.4f * density));
+                        minorWidth = (sc > 3000000f) ? (7.0f * density) : ((sc > 800000f) ? (4.2f * density) : (2.8f * density));
+                        break;
+                    case DASHED_CADASTRAL:
+                        minorWidth = (sc > 3000000f) ? (1.8f * density) : ((sc > 800000f) ? (1.2f * density) : (0.85f * density));
                         break;
                     case DOTTED_MATRIX:
-                        minorWidth = (sc > 3000000f) ? (2.2f * density) : ((sc > 800000f) ? (1.6f * density) : (1.2f * density));
+                        minorWidth = (sc > 3000000f) ? (2.6f * density) : ((sc > 800000f) ? (1.8f * density) : (1.3f * density));
+                        break;
+                    case ARTISTIC_BRUSH:
+                        minorWidth = (sc > 3000000f) ? (2.2f * density) : ((sc > 800000f) ? (1.4f * density) : (1.0f * density));
+                        break;
+                    case DESATURATED_NOIR:
+                        minorWidth = (sc > 3000000f) ? (2.2f * density) : ((sc > 800000f) ? (1.3f * density) : (0.9f * density));
+                        break;
+                    case DOUBLE_CASING:
+                        minorWidth = (sc > 3000000f) ? (1.8f * density) : ((sc > 800000f) ? (1.1f * density) : (0.8f * density));
                         break;
                     default:
                         minorWidth = (sc > 3000000f) ? (1.6f * density) : ((sc > 800000f) ? (1.0f * density) : (0.75f * density));
@@ -1585,27 +1730,36 @@ public class MontrealBenchMapView extends View {
 
             // 5. Major Streets (Spatially indexed arterial lines across all zooms)
             if (majorGrid != null) {
-                if (activeStyle == MapRenderStyle.DOUBLE_CASING && sc > 180000f) {
+                if (activeStyle == MapRenderStyle.DOUBLE_CASING && sc > 90000f) {
                     // Double casing: Pass 1 outer casing
-                    float casingWidth = (sc > 3000000f) ? (6.4f * density) : ((sc > 600000f) ? (4.2f * density) : ((sc > 240000f) ? (3.2f * density) : (2.4f * density)));
+                    float casingWidth = (sc > 3000000f) ? (8.0f * density) : ((sc > 600000f) ? (5.2f * density) : ((sc > 240000f) ? (3.8f * density) : (2.8f * density)));
                     paintStreetMajor.setStrokeWidth(casingWidth);
                     majorGrid.drawVisible(canvas, lineBuffer, paintStreetMajor, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
 
                     // Pass 2 inner core (matching land fill)
-                    float coreWidth = (sc > 3000000f) ? (3.6f * density) : ((sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.6f * density) : (1.1f * density)));
+                    float coreWidth = (sc > 3000000f) ? (4.8f * density) : ((sc > 600000f) ? (3.0f * density) : ((sc > 240000f) ? (2.0f * density) : (1.4f * density)));
                     paintStreetCasingCore.setStrokeWidth(coreWidth);
                     majorGrid.drawVisible(canvas, lineBuffer, paintStreetCasingCore, viewMinX, viewMaxX, viewMinY, viewMaxY, halfW, halfH, cX, cY, sc, MapRenderStyle.SWISS_CLEAN, density);
                 } else {
                     float majorWidth;
                     switch (activeStyle) {
                         case THIN_ARCHITECTURAL:
-                            majorWidth = (sc > 3000000f) ? (2.0f * density) : ((sc > 600000f) ? (1.3f * density) : ((sc > 240000f) ? (0.9f * density) : (0.65f * density)));
+                            majorWidth = (sc > 3000000f) ? (1.5f * density) : ((sc > 600000f) ? (0.95f * density) : ((sc > 240000f) ? (0.65f * density) : (0.45f * density)));
                             break;
                         case BOLD_BAUHAUS:
-                            majorWidth = (sc > 3000000f) ? (5.5f * density) : ((sc > 600000f) ? (3.8f * density) : ((sc > 240000f) ? (2.8f * density) : (2.0f * density)));
+                            majorWidth = (sc > 3000000f) ? (14.0f * density) : ((sc > 600000f) ? (8.5f * density) : ((sc > 240000f) ? (5.8f * density) : (4.0f * density)));
+                            break;
+                        case DASHED_CADASTRAL:
+                            majorWidth = (sc > 3000000f) ? (4.2f * density) : ((sc > 600000f) ? (2.8f * density) : ((sc > 240000f) ? (2.0f * density) : (1.4f * density)));
                             break;
                         case DOTTED_MATRIX:
-                            majorWidth = (sc > 3000000f) ? (3.8f * density) : ((sc > 600000f) ? (2.6f * density) : ((sc > 240000f) ? (1.9f * density) : (1.4f * density)));
+                            majorWidth = (sc > 3000000f) ? (4.8f * density) : ((sc > 600000f) ? (3.2f * density) : ((sc > 240000f) ? (2.4f * density) : (1.7f * density)));
+                            break;
+                        case ARTISTIC_BRUSH:
+                            majorWidth = (sc > 3000000f) ? (5.0f * density) : ((sc > 600000f) ? (3.2f * density) : ((sc > 240000f) ? (2.2f * density) : (1.5f * density)));
+                            break;
+                        case DESATURATED_NOIR:
+                            majorWidth = (sc > 3000000f) ? (6.0f * density) : ((sc > 600000f) ? (3.8f * density) : ((sc > 240000f) ? (2.6f * density) : (1.8f * density)));
                             break;
                         default:
                             majorWidth = (sc > 3000000f) ? (3.4f * density) : ((sc > 600000f) ? (2.2f * density) : ((sc > 240000f) ? (1.5f * density) : (1.1f * density)));
@@ -1644,10 +1798,13 @@ public class MontrealBenchMapView extends View {
                 drawHalo = true;
             }
 
-            if (activeStyle == MapRenderStyle.BOLD_BAUHAUS) {
-                benchRadius = benchRadius * 1.25f;
+            boolean isBauhaus = (activeStyle == MapRenderStyle.BOLD_BAUHAUS);
+            if (isBauhaus) {
+                benchRadius = benchRadius * 1.4f;
             } else if (activeStyle == MapRenderStyle.THIN_ARCHITECTURAL) {
-                benchRadius = benchRadius * 0.85f;
+                benchRadius = benchRadius * 0.8f;
+            } else if (activeStyle == MapRenderStyle.DOTTED_MATRIX) {
+                benchRadius = benchRadius * 1.15f;
             }
 
             visibleBenches.clear();
@@ -1663,10 +1820,19 @@ public class MontrealBenchMapView extends View {
                     Bench b = visibleBenches.get(i);
                     float bx = halfW + (float) ((b.mercX - cX) * sc);
                     float by = halfH - (float) ((b.mercY - cY) * sc);
-                    if (drawHalo) {
-                        canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchHalo);
+                    if (isBauhaus) {
+                        if (drawHalo) {
+                            canvas.drawRect(bx - benchRadius - 1.2f * density, by - benchRadius - 1.2f * density,
+                                    bx + benchRadius + 1.2f * density, by + benchRadius + 1.2f * density, paintBenchHalo);
+                        }
+                        canvas.drawRect(bx - benchRadius, by - benchRadius, bx + benchRadius, by + benchRadius,
+                                b.isInPark() ? paintBenchPark : paintBenchStreet);
+                    } else {
+                        if (drawHalo) {
+                            canvas.drawCircle(bx, by, benchRadius + 1.2f * density, paintBenchHalo);
+                        }
+                        canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
                     }
-                    canvas.drawCircle(bx, by, benchRadius, b.isInPark() ? paintBenchPark : paintBenchStreet);
                 }
             }
 
@@ -1755,6 +1921,14 @@ public class MontrealBenchMapView extends View {
                     dCore.lineTo(bx - diamondRadius, by);
                     dCore.close();
                     canvas.drawPath(dCore, paintBenchSelectedCore);
+                } else if (isBauhaus) {
+                    float selRadius = Math.max(benchRadius, 4.5f * density);
+                    float outer = selRadius + 8.0f * density;
+                    float gap = selRadius + 4.5f * density;
+                    float core = selRadius + 1.5f * density;
+                    canvas.drawRect(bx - outer, by - outer, bx + outer, by + outer, paintBenchSelected);
+                    canvas.drawRect(bx - gap, by - gap, bx + gap, by + gap, paintBenchSelectedGap);
+                    canvas.drawRect(bx - core, by - core, bx + core, by + core, paintBenchSelectedCore);
                 } else {
                     float selRadius = Math.max(benchRadius, 4.0f * density);
                     canvas.drawCircle(bx, by, selRadius + 8.0f * density, paintBenchSelected);

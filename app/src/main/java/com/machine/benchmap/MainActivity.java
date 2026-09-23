@@ -3118,6 +3118,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 bsBg.setColor(bgDialog);
                 bsBg.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
                 bs.setBackground(bsBg);
+                BottomSheetBehavior<?> behavior = BottomSheetBehavior.from(bs);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
             }
         });
 
