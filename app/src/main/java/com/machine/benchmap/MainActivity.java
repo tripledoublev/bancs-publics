@@ -46,6 +46,7 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Window;
 import android.widget.EditText;
@@ -2643,12 +2644,30 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         if (dialog.getWindow() != null) {
             Window w = dialog.getWindow();
+            w.setBackgroundDrawable(new ColorDrawable(0xFF000000));
+            w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            w.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                WindowManager.LayoutParams lp = w.getAttributes();
+                lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                w.setAttributes(lp);
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                w.setStatusBarContrastEnforced(false);
+                w.setNavigationBarContrastEnforced(false);
+            }
+
+            w.setStatusBarColor(0xFF000000);
+            w.setNavigationBarColor(0xFF000000);
             WindowCompat.setDecorFitsSystemWindows(w, false);
-            w.setStatusBarColor(Color.TRANSPARENT);
-            w.setNavigationBarColor(Color.TRANSPARENT);
+
             WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(w, w.getDecorView());
             controller.setAppearanceLightStatusBars(false);
             controller.setAppearanceLightNavigationBars(false);
+            controller.hide(WindowInsetsCompat.Type.systemBars());
+            controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
         }
 
         ImageView iv = view.findViewById(R.id.iv_fullscreen_photo);
@@ -2672,7 +2691,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (btnClose != null) {
             GradientDrawable closeBg = new GradientDrawable();
             closeBg.setShape(GradientDrawable.OVAL);
-            closeBg.setColor(Color.parseColor("#99121316"));
+            closeBg.setColor(Color.parseColor("#B3000000"));
             closeBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor("#4DFFFFFF"));
             btnClose.setBackground(closeBg);
             btnClose.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FFFFFF")));
@@ -2687,7 +2706,12 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             iv.setImageBitmap(bmp);
         }
         iv.setOnClickListener(v -> dialog.dismiss());
+        view.setOnClickListener(v -> dialog.dismiss());
+
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+        }
     }
 
     private void checkLocationPermission() {
