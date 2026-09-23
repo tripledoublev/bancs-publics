@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Politique de Confidentialité — BenchMap (Bancs de Montréal)</title>
+  <meta name="description" content="Politique de confidentialité officielle de BenchMap. Zéro collecte de données, 100% hors-ligne et respect absolu de la vie privée.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="icon.png">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <nav class="nav-bar">
+        <a href="index.html" class="brand">
+          <span class="brand-dot"></span>
+          <span>BenchMap</span>
+        </a>
+        <ul class="nav-links">
+          <li><a href="index.html">Accueil</a></li>
+          <li><a href="privacy.html" class="active">Confidentialité</a></li>
+          <li><a href="terms.html">Conditions</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <div class="content-box">
+        <span class="badge">100% Local-First • Zéro Télémétrie</span>
+        <h1>Politique de Confidentialité</h1>
+        <p class="tagline">Application : <strong>BenchMap — Bancs de Montréal</strong> (<code>com.machine.benchmap</code>)</p>
+
+        <div class="meta-info">
+          <span>Développeur : <strong>Vincent Charlebois</strong></span>
+          <span>Courriel : <a href="mailto:vincentcharlebois@gmail.com">vincentcharlebois@gmail.com</a></span>
+          <span>Date d'effet : 23 septembre 2026</span>
+          <span>Dernière mise à jour : 23 septembre 2026</span>
+        </div>
+
+        <div class="highlight-box">
+          <p>🛡️ <strong>Principe fondamental :</strong> BenchMap ne collecte, ne stocke, ne transmet et ne vend <strong>AUCUNE</strong> de vos données personnelles. L'application fonctionne à 100 % hors-ligne, sans compte utilisateur, sans identifiant publicitaire et sans aucun serveur distant.</p>
+        </div>
+
+        <h2>1. Présentation générale</h2>
+        <p>BenchMap (« l'Application ») est un atlas cartographique vectoriel et un carnet de flânerie dédié aux 9 602 bancs publics de l'Île de Montréal. Conçue selon une philosophie locale stricte (« <em>local-first</em> ») et le principe de minimisation des données (RGPD / Loi 25 du Québec), l'Application garantit à l'utilisateur une souveraineté numérique totale.</p>
+
+        <h2>2. Données personnelles et télémétrie</h2>
+        <p>L'Application n'enregistre et ne transmet aucune des données suivantes :</p>
+        <ul>
+          <li><strong>Aucune coordonnée personnelle :</strong> Ni nom, ni adresse, ni numéro de téléphone, ni adresse courriel.</li>
+          <li><strong>Aucun identifiant matériel ou logiciel :</strong> Aucun identifiant publicitaire (Google Advertising ID / GAID), aucune adresse MAC, aucun identifiant d'appareil (IMEI, Android ID).</li>
+          <li><strong>Aucun outil de mesure d'audience ou de télémétrie :</strong> Aucun traceur, aucun outil d'analyse (ex: Google Analytics, Firebase, Mixpanel, Crashlytics).</li>
+          <li><strong>Aucune publicité :</strong> L'Application ne contient aucun kit de développement (SDK) publicitaire.</li>
+        </ul>
+
+        <h2>3. Utilisation des autorisations Android</h2>
+        <p>Pour assurer ses fonctionnalités interactives, l'Application sollicite des autorisations système strictement restreintes à un traitement éphémère et local :</p>
+
+        <h3>a) Données de localisation (<code>ACCESS_FINE_LOCATION</code>, <code>ACCESS_COARSE_LOCATION</code>)</h3>
+        <ul>
+          <li><strong>Finalité :</strong> Centrer la carte sur votre position actuelle, calculer la distance vous séparant des bancs les plus proches et orienter le cône de visée sur le plan.</li>
+          <li><strong>Traitement 100 % local :</strong> Vos coordonnées géographiques sont traitées en mémoire vive en temps réel par le processeur de votre appareil. Elles ne sont <strong>jamais enregistrées sur disque, jamais journalisées, et jamais transmises sur un réseau</strong>.</li>
+          <li><strong>Caractère facultatif :</strong> Vous pouvez refuser l'accès à la localisation. La consultation de la carte, la recherche de rues, l'exploration manuelle et le saut au hasard demeurent pleinement opérationnels.</li>
+        </ul>
+
+        <h3>b) Appareil photo et galerie (<code>CAMERA</code>, <code>READ_MEDIA_IMAGES</code>)</h3>
+        <ul>
+          <li><strong>Finalité :</strong> Permettre à l'utilisateur de prendre en photo un banc ou de joindre un cliché existant depuis sa galerie à une note ou à un banc personnalisé.</li>
+          <li><strong>Stockage local exclusif :</strong> Les photographies sont stockées dans le répertoire privé de l'Application sur l'appareil (<code>/data/data/com.machine.benchmap/files/bench_photos/</code>). Elles ne quittent jamais votre téléphone.</li>
+        </ul>
+
+        <h3>c) Capteurs de rotation (<code>HIGH_SAMPLING_RATE_SENSORS</code>)</h3>
+        <ul>
+          <li><strong>Finalité :</strong> Alimenter la boussole suisse et orienter la carte et le cône de regard dans la direction physique vers laquelle votre téléphone pointe. Les données des capteurs inertiels sont lues en mémoire et immédiatement libérées.</li>
+        </ul>
+
+        <h3>d) Vibreur (<code>VIBRATE</code>)</h3>
+        <ul>
+          <li><strong>Finalité :</strong> Générer des micro-retours haptiques d'accroche (clic subtil de boussole orientée au Nord, tap de confirmation).</li>
+        </ul>
+
+        <h2>4. Fonctionnalité « Rendez-vous à mi-chemin »</h2>
+        <p>BenchMap permet à deux personnes de convenir d'un banc de rencontre à mi-chemin sans jamais dévoiler leur adresse exacte ni passer par un serveur :</p>
+        <ul>
+          <li><strong>Chiffrement & Clé hors-ligne :</strong> L'Application génère une clé compacte (ex : <code>BM1-7K9P-X4W2-9D</code>) encodant une coordonnée et un rayon de flou de confidentialité.</li>
+          <li><strong>Zéro serveur :</strong> L'échange de cette clé se fait directement de personne à personne via le canal de votre choix (Signal, SMS, WhatsApp).</li>
+          <li><strong>Flou de confidentialité :</strong> Vous pouvez choisir un rayon de flou (quartier ~300 m ou rue ~150 m) afin que votre domicile ne soit jamais révélé.</li>
+        </ul>
+
+        <h2>5. Données de l'utilisateur et suppression</h2>
+        <p>Toutes les données générées par l'utilisateur (listes de bancs favoris, bancs personnalisés « Mes bancs », notes et photos) sont enregistrées exclusivement sur le stockage local de l'appareil. La désinstallation de l'Application supprime l'intégralité de ces données de manière définitive et irréversible.</p>
+
+        <h2>6. Conformité réglementaire internationale</h2>
+        <ul>
+          <li><strong>Loi 25 (Québec) :</strong> Respect intégral des exigences de protection des renseignements personnels. Aucun renseignement n'est collecté.</li>
+          <li><strong>RGPD (Règlement Général sur la Protection des Données - UE) :</strong> Respect du principe de « <em>Privacy by Design</em> » et de « <em>Privacy by Default</em> ». Aucune donnée n'étant collectée, aucun traitement transfrontalier n'a lieu.</li>
+          <li><strong>CCPA / CPRA (Californie) :</strong> Nous ne vendons, ne louons et ne partageons aucune information personnelle (« <em>We do not sell or share your personal information</em> »).</li>
+          <li><strong>Protection des mineurs (COPPA) :</strong> L'Application ne s'adresse pas spécifiquement aux enfants mais est exempte de tout risque de collecte de données pour tout public.</li>
+        </ul>
+
+        <h2>7. Modifications de la politique</h2>
+        <p>Si la présente politique devait être modifiée à l'avenir (par exemple lors de l'ajout d'une fonctionnalité optionnelle), la date de révision sera mise à jour sur cette page. La nature 100 % hors-ligne et respectueuse de la vie privée restera le pilier inaltérable du projet.</p>
+
+        <h2>8. Contact & Développeur</h2>
+        <p>Pour toute question ou demande de renseignement concernant cette politique de confidentialité :</p>
+        <p>
+          <strong>Vincent Charlebois</strong><br>
+          Montréal (Québec), Canada<br>
+          Courriel : <a href="mailto:vincentcharlebois@gmail.com">vincentcharlebois@gmail.com</a><br>
+          Code source & dépôt : <a href="https://github.com/tripledoublev/bancs-publics" target="_blank" rel="noopener">github.com/tripledoublev/bancs-publics</a>
+        </p>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 40px 0;">
+
+        <!-- English Version Summary for Google Play Reviewers -->
+        <h2>Privacy Policy (English Summary for App Store Review)</h2>
+        <p><strong>BenchMap</strong> is an offline, local-first public bench navigation app for Montreal, developed by Vincent Charlebois.</p>
+        <ul>
+          <li><strong>Zero Data Collection:</strong> BenchMap does not collect, record, transmit, or sell any personal data, analytics, or identifiers.</li>
+          <li><strong>No Servers:</strong> Operates 100% on-device with zero cloud infrastructure.</li>
+          <li><strong>Location Permission:</strong> Used strictly in real-time on-device to compute nearest benches and user orientation. Location data is never stored or transmitted.</li>
+          <li><strong>Camera & Media:</strong> Used solely to capture and attach bench photos stored inside the app's local private storage.</li>
+          <li><strong>Data Deletion:</strong> All user-created notes and photos are stored locally on the device and permanently erased when the app is uninstalled.</li>
+          <li><strong>Developer Contact:</strong> <a href="mailto:vincentcharlebois@gmail.com">vincentcharlebois@gmail.com</a></li>
+        </ul>
+      </div>
+    </main>
+
+    <footer>
+      <p>© 2026 Vincent Charlebois. Conçu à Montréal selon les principes du minimalisme suisse. Code sous licence MIT.</p>
+      <p style="margin-top: 8px;">
+        <a href="index.html">Accueil</a> • 
+        <a href="privacy.html">Confidentialité</a> • 
+        <a href="terms.html">Conditions</a> • 
+        <a href="support.html">Support</a> • 
+        <a href="https://github.com/tripledoublev/bancs-publics" target="_blank" rel="noopener">GitHub</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
