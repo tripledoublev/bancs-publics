@@ -69,10 +69,17 @@ import android.graphics.Bitmap;
 import android.widget.CheckBox;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.location.Address;
+import android.location.Geocoder;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * MainActivity - Montreal BenchMap v0.1.0
@@ -1025,6 +1032,111 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         dialog.show();
     }
 
+    public static class LocationSearchItem {
+        public final String name;
+        public final String subtitle;
+        public final String icon;
+        public final double lat;
+        public final double lon;
+        public final float zoomScale;
+        public final int benchCount;
+
+        public LocationSearchItem(String name, String subtitle, String icon, double lat, double lon, float zoomScale, int benchCount) {
+            this.name = name;
+            this.subtitle = subtitle;
+            this.icon = icon;
+            this.lat = lat;
+            this.lon = lon;
+            this.zoomScale = zoomScale;
+            this.benchCount = benchCount;
+        }
+    }
+
+    private List<LocationSearchItem> cachedMontrealLocations = null;
+
+    private List<LocationSearchItem> getPreloadedMontrealLocations() {
+        if (cachedMontrealLocations != null) return cachedMontrealLocations;
+        List<LocationSearchItem> list = new ArrayList<>();
+
+        // 1. Curated Iconic Montreal Landmarks & Neighborhoods
+        list.add(new LocationSearchItem("Mont-Royal (Belvédère Kondiaronk)", "Sommet & Belvédère • Ville-Marie", "⛰️", 45.5047, -73.5878, 1500000f, 0));
+        list.add(new LocationSearchItem("Plateau-Mont-Royal", "Quartier emblématique", "🏙️", 45.5225, -73.5786, 1200000f, 0));
+        list.add(new LocationSearchItem("Mile End", "Avenue Bernard & Saint-Viateur", "🏙️", 45.5238, -73.5991, 1400000f, 0));
+        list.add(new LocationSearchItem("Vieux-Montréal & Vieux-Port", "Arrondissement historique", "🏙️", 45.5048, -73.5539, 1500000f, 0));
+        list.add(new LocationSearchItem("Centre-Ville (Downtown)", "Ville-Marie • Sainte-Catherine", "🏙️", 45.5017, -73.5673, 1400000f, 0));
+        list.add(new LocationSearchItem("Griffintown", "Bassin Peel & Canal de Lachine", "🏙️", 45.4937, -73.5614, 1500000f, 0));
+        list.add(new LocationSearchItem("Saint-Henri", "Marché Atwater & Canal", "🏙️", 45.4764, -73.5867, 1500000f, 0));
+        list.add(new LocationSearchItem("Petite Italie", "Marché Jean-Talon • Saint-Laurent", "🏙️", 45.5361, -73.6152, 1500000f, 0));
+        list.add(new LocationSearchItem("Verdun", "Berges du Saint-Laurent • Wellington", "🏙️", 45.4578, -73.5684, 1300000f, 0));
+        list.add(new LocationSearchItem("Outremont", "Avenues ombragées & parcs", "🏙️", 45.5186, -73.6128, 1300000f, 0));
+        list.add(new LocationSearchItem("Westmount", "Sommet & parcs", "🏙️", 45.4857, -73.5964, 1300000f, 0));
+        list.add(new LocationSearchItem("Rosemont - La Petite-Patrie", "Promenade Masson & parcs", "🏙️", 45.5414, -73.5855, 1200000f, 0));
+        list.add(new LocationSearchItem("Hochelaga-Maisonneuve", "Promenade Ontario & Stade", "🏙️", 45.5422, -73.5414, 1300000f, 0));
+        list.add(new LocationSearchItem("Villeray", "Parc Jarry & cafés", "🏙️", 45.5471, -73.6144, 1300000f, 0));
+        list.add(new LocationSearchItem("Côte-des-Neiges", "Oratoire & Université", "🏙️", 45.4967, -73.6231, 1300000f, 0));
+        list.add(new LocationSearchItem("Notre-Dame-de-Grâce (NDG)", "Avenue Monkland & Sherbrooke", "🏙️", 45.4731, -73.6186, 1300000f, 0));
+        list.add(new LocationSearchItem("Île Sainte-Hélène", "Parc Jean-Drapeau • Biosphère", "🌳", 45.5147, -73.5333, 1300000f, 0));
+        list.add(new LocationSearchItem("Île Notre-Dame", "Circuit Gilles-Villeneuve / Plage", "🌳", 45.5033, -73.5283, 1300000f, 0));
+        list.add(new LocationSearchItem("Place des Arts", "Quartier des Spectacles", "📍", 45.5083, -73.5667, 1800000f, 0));
+        list.add(new LocationSearchItem("Place d'Armes", "Vieux-Montréal • Basilique Notre-Dame", "📍", 45.5049, -73.5567, 1800000f, 0));
+        list.add(new LocationSearchItem("Oratoire Saint-Joseph", "Mont-Royal Ouest", "📍", 45.4919, -73.6172, 1800000f, 0));
+        list.add(new LocationSearchItem("Marché Jean-Talon", "Marché public • Petite Italie", "📍", 45.5361, -73.6152, 1800000f, 0));
+        list.add(new LocationSearchItem("Marché Atwater", "Saint-Henri • Canal de Lachine", "📍", 45.4795, -73.5765, 1800000f, 0));
+
+        // 2. Extract unique Parks and Streets from loaded dataset
+        List<Bench> benches = benchMapView.getAllBenches();
+        if (benches != null && !benches.isEmpty()) {
+            Map<String, List<Bench>> parkMap = new HashMap<>();
+            Map<String, List<Bench>> streetMap = new HashMap<>();
+
+            for (Bench b : benches) {
+                if (b.park != null && !b.park.trim().isEmpty()) {
+                    parkMap.computeIfAbsent(b.park.trim(), k -> new ArrayList<>()).add(b);
+                }
+                if (b.street != null && !b.street.trim().isEmpty() && !b.street.equalsIgnoreCase("Rue sans nom")) {
+                    streetMap.computeIfAbsent(b.street.trim(), k -> new ArrayList<>()).add(b);
+                }
+            }
+
+            // Add all parks with bench counts & average coordinates
+            for (Map.Entry<String, List<Bench>> entry : parkMap.entrySet()) {
+                String parkName = entry.getKey();
+                List<Bench> pBenches = entry.getValue();
+                double sumLat = 0, sumLon = 0;
+                for (Bench b : pBenches) {
+                    sumLat += b.lat;
+                    sumLon += b.lon;
+                }
+                double avgLat = sumLat / pBenches.size();
+                double avgLon = sumLon / pBenches.size();
+                String borough = pBenches.get(0).borough;
+                String sub = (borough != null && !borough.isEmpty() ? borough : "Parc de Montréal")
+                        + " • " + pBenches.size() + " banc" + (pBenches.size() > 1 ? "s" : "");
+                list.add(new LocationSearchItem(parkName, sub, "🌳", avgLat, avgLon, 1600000f, pBenches.size()));
+            }
+
+            // Add all streets with bench counts & average coordinates
+            for (Map.Entry<String, List<Bench>> entry : streetMap.entrySet()) {
+                String streetName = entry.getKey();
+                List<Bench> sBenches = entry.getValue();
+                double sumLat = 0, sumLon = 0;
+                for (Bench b : sBenches) {
+                    sumLat += b.lat;
+                    sumLon += b.lon;
+                }
+                double avgLat = sumLat / sBenches.size();
+                double avgLon = sumLon / sBenches.size();
+                String borough = sBenches.get(0).borough;
+                String sub = (borough != null && !borough.isEmpty() ? borough : "Artère de Montréal")
+                        + " • " + sBenches.size() + " banc" + (sBenches.size() > 1 ? "s" : "");
+                list.add(new LocationSearchItem(streetName, sub, "🛣️", avgLat, avgLon, 1800000f, sBenches.size()));
+            }
+        }
+
+        cachedMontrealLocations = list;
+        return list;
+    }
+
     private void showSearchDialog() {
         BottomSheetDialog searchDialog = new BottomSheetDialog(this);
         View view = getLayoutInflater().inflate(R.layout.dialog_search, null);
@@ -1071,6 +1183,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (etSearchQuery != null) {
             etSearchQuery.setTextColor(textPri);
             etSearchQuery.setHintTextColor(textSec);
+            etSearchQuery.setHint("Adresse, rue, parc, quartier...");
         }
         if (btnSearchClear != null) btnSearchClear.setColorFilter(textSec);
         if (btnSearchClose != null) {
@@ -1081,7 +1194,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             });
         }
         if (tvSearchStatus != null) tvSearchStatus.setTextColor(textSec);
-        if (tvSearchEmpty != null) tvSearchEmpty.setTextColor(textSec);
+        if (tvSearchEmpty != null) {
+            tvSearchEmpty.setTextColor(textSec);
+            tvSearchEmpty.setText("Aucun lieu ou adresse trouvé à Montréal");
+        }
 
         if (searchDialog.getWindow() != null) {
             searchDialog.getWindow().setSoftInputMode(
@@ -1105,8 +1221,8 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             }
         });
 
-        List<Bench> allBenches = benchMapView.getAllBenches();
-        final List<Bench> filteredList = new ArrayList<>();
+        List<LocationSearchItem> allLocations = getPreloadedMontrealLocations();
+        final List<LocationSearchItem> filteredList = new ArrayList<>();
 
         BaseAdapter adapter = new BaseAdapter() {
             @Override
@@ -1115,7 +1231,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             }
 
             @Override
-            public Bench getItem(int position) {
+            public LocationSearchItem getItem(int position) {
                 return filteredList.get(position);
             }
 
@@ -1129,21 +1245,21 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 if (convertView == null) {
                     convertView = getLayoutInflater().inflate(R.layout.item_search_bench, parent, false);
                 }
-                Bench bench = getItem(position);
+                LocationSearchItem loc = getItem(position);
                 TextView tvIcon = convertView.findViewById(R.id.tv_item_icon);
                 TextView tvTitle = convertView.findViewById(R.id.tv_item_title);
                 TextView tvSubtitle = convertView.findViewById(R.id.tv_item_subtitle);
                 TextView tvDistance = convertView.findViewById(R.id.tv_item_distance);
 
-                tvTitle.setText(bench.getDisplayName());
+                tvTitle.setText(loc.name);
                 tvTitle.setTextColor(textPri);
-                tvSubtitle.setText(bench.getDisplaySubtitle());
+                tvSubtitle.setText(loc.subtitle);
                 tvSubtitle.setTextColor(textSec);
-                tvIcon.setText(bench.isInPark() ? "🌳" : "🪑");
+                tvIcon.setText(loc.icon);
 
                 if (lastLocation != null) {
                     double distMeters = MontrealBenchMapView.computeDistance(
-                            lastLocation.getLatitude(), lastLocation.getLongitude(), bench.lat, bench.lon);
+                            lastLocation.getLatitude(), lastLocation.getLongitude(), loc.lat, loc.lon);
                     tvDistance.setVisibility(View.VISIBLE);
                     if (distMeters < 1000) {
                         tvDistance.setText(String.format(Locale.FRENCH, "%d m", (int) distMeters));
@@ -1158,13 +1274,17 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 convertView.setOnClickListener(v -> {
                     triggerHapticTick();
                     searchDialog.dismiss();
-                    benchMapView.focusBench(bench);
+                    benchMapView.animateToCoords(loc.lat, loc.lon, loc.zoomScale);
+                    benchMapView.deselectBench();
+                    Toast.makeText(MainActivity.this, loc.name, Toast.LENGTH_SHORT).show();
                 });
 
                 return convertView;
             }
         };
         listSearchResults.setAdapter(adapter);
+
+        final long[] lastSearchTime = new long[]{0};
 
         Runnable performFilter = () -> {
             String rawQuery = (etSearchQuery != null && etSearchQuery.getText() != null)
@@ -1174,29 +1294,43 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             filteredList.clear();
 
             if (rawQuery.isEmpty()) {
-                // Curated top highlights across Montreal
-                String[] topLocations = new String[]{
-                    "Mont-Royal", "La Fontaine", "Sainte-Catherine", "Saint-Laurent",
-                    "Wellington", "Jarry", "Saint-Denis", "Notre-Dame", "Laurier", "Maisonneuve"
+                // Top suggested Montreal areas & arteries
+                String[] topPicks = new String[]{
+                    "Mont-Royal (Belvédère", "Plateau-Mont-Royal", "Vieux-Montréal",
+                    "Parc La Fontaine", "Rue Wellington", "Boulevard Saint-Laurent",
+                    "Rue Sainte-Catherine", "Rue Saint-Denis", "Marché Jean-Talon", "Parc Jarry"
                 };
-                for (String loc : topLocations) {
-                    for (Bench b : allBenches) {
-                        if (b.getDisplayName().toLowerCase(Locale.ROOT).contains(loc.toLowerCase(Locale.ROOT)) ||
-                            b.street.toLowerCase(Locale.ROOT).contains(loc.toLowerCase(Locale.ROOT))) {
-                            filteredList.add(b);
+                for (String pick : topPicks) {
+                    for (LocationSearchItem item : allLocations) {
+                        if (item.name.toLowerCase(Locale.ROOT).contains(pick.toLowerCase(Locale.ROOT))) {
+                            filteredList.add(item);
                             break;
                         }
                     }
                 }
-                tvSearchStatus.setText("SUGGESTIONS (" + filteredList.size() + ")");
+                tvSearchStatus.setText("DESTINATIONS POPULAIRES (" + filteredList.size() + ")");
             } else {
+                // 1. Check if GPS Coordinates
+                String[] coordParts = rawQuery.replace("°", "").split("[,\\s]+");
+                if (coordParts.length == 2) {
+                    try {
+                        double lat = Double.parseDouble(coordParts[0]);
+                        double lon = Double.parseDouble(coordParts[1]);
+                        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                            filteredList.add(new LocationSearchItem("Coordonnées GPS",
+                                String.format(Locale.FRENCH, "%.5f° N, %.5f° W", lat, Math.abs(lon)),
+                                "🧭", lat, lon, 2200000f, 0));
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+
+                // 2. Local token matching on streets, parks, landmarks
                 String normalizedQuery = normalizeForSearch(rawQuery);
                 String[] tokens = normalizedQuery.split("\\s+");
-                int limit = 60;
-                for (Bench b : allBenches) {
-                    String searchable = normalizeForSearch(
-                        b.street + " " + b.park + " " + b.borough + " " + b.getAddress() + " " + b.material + " " + b.backrest
-                    );
+                int limit = 50;
+
+                for (LocationSearchItem item : allLocations) {
+                    String searchable = normalizeForSearch(item.name + " " + item.subtitle);
                     boolean allMatch = true;
                     for (String token : tokens) {
                         if (!token.isEmpty() && !searchable.contains(token)) {
@@ -1205,11 +1339,50 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                         }
                     }
                     if (allMatch) {
-                        filteredList.add(b);
+                        filteredList.add(item);
                         if (filteredList.size() >= limit) break;
                     }
                 }
-                tvSearchStatus.setText(filteredList.size() + " RÉSULTAT" + (filteredList.size() > 1 ? "S" : ""));
+
+                // 3. Online Geocoder query for real addresses (numbers, street corners)
+                if (rawQuery.length() >= 3 && Geocoder.isPresent()) {
+                    final long searchId = System.currentTimeMillis();
+                    lastSearchTime[0] = searchId;
+                    final String queryToGeocode = rawQuery;
+
+                    new Thread(() -> {
+                        try {
+                            Geocoder geocoder = new Geocoder(MainActivity.this, Locale.CANADA_FRENCH);
+                            String q = queryToGeocode;
+                            if (!q.toLowerCase(Locale.ROOT).contains("montr")) {
+                                q += ", Montréal, QC";
+                            }
+                            List<Address> addresses = geocoder.getFromLocationName(q, 4, 45.38, -73.99, 45.72, -73.45);
+                            if (addresses != null && !addresses.isEmpty() && lastSearchTime[0] == searchId) {
+                                List<LocationSearchItem> geoItems = new ArrayList<>();
+                                for (Address addr : addresses) {
+                                    String line = addr.getAddressLine(0);
+                                    if (line == null) line = addr.getFeatureName();
+                                    String sub = (addr.getLocality() != null ? addr.getLocality() : "Montréal");
+                                    if (addr.getPostalCode() != null) sub += " • " + addr.getPostalCode();
+                                    geoItems.add(new LocationSearchItem(line, sub, "📍", addr.getLatitude(), addr.getLongitude(), 2200000f, 0));
+                                }
+                                runOnUiThread(() -> {
+                                    if (lastSearchTime[0] == searchId && etSearchQuery != null && etSearchQuery.getText() != null
+                                            && etSearchQuery.getText().toString().trim().equals(queryToGeocode)) {
+                                        for (int g = geoItems.size() - 1; g >= 0; g--) {
+                                            filteredList.add(0, geoItems.get(g));
+                                        }
+                                        adapter.notifyDataSetChanged();
+                                        tvSearchStatus.setText(filteredList.size() + " EMPLACEMENT" + (filteredList.size() > 1 ? "S" : ""));
+                                    }
+                                });
+                            }
+                        } catch (Exception ignored) {}
+                    }).start();
+                }
+
+                tvSearchStatus.setText(filteredList.size() + " EMPLACEMENT" + (filteredList.size() > 1 ? "S" : ""));
             }
 
             boolean hasResults = !filteredList.isEmpty();
@@ -1237,6 +1410,21 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
             @Override
             public void afterTextChanged(Editable s) {}
+        });
+
+        etSearchQuery.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                if (!filteredList.isEmpty()) {
+                    LocationSearchItem top = filteredList.get(0);
+                    triggerHapticTick();
+                    searchDialog.dismiss();
+                    benchMapView.animateToCoords(top.lat, top.lon, top.zoomScale);
+                    benchMapView.deselectBench();
+                    Toast.makeText(MainActivity.this, top.name, Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+            }
+            return false;
         });
 
         searchDialog.show();
@@ -2453,14 +2641,51 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         View view = getLayoutInflater().inflate(R.layout.dialog_photo_viewer, null);
         dialog.setContentView(view);
 
+        if (dialog.getWindow() != null) {
+            Window w = dialog.getWindow();
+            WindowCompat.setDecorFitsSystemWindows(w, false);
+            w.setStatusBarColor(Color.TRANSPARENT);
+            w.setNavigationBarColor(Color.TRANSPARENT);
+            WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(w, w.getDecorView());
+            controller.setAppearanceLightStatusBars(false);
+            controller.setAppearanceLightNavigationBars(false);
+        }
+
         ImageView iv = view.findViewById(R.id.iv_fullscreen_photo);
-        View btnClose = view.findViewById(R.id.btn_close_photo);
+        ImageView btnClose = view.findViewById(R.id.btn_close_photo);
+
+        // Apply Window Insets so close button sits properly beneath status bar & camera cutout
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            Insets statusBarInsets = insets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout());
+            int topPad = Math.max(statusBarInsets.top, (int) (24 * getResources().getDisplayMetrics().density));
+            int rightPad = Math.max(statusBarInsets.right, (int) (16 * getResources().getDisplayMetrics().density));
+            if (btnClose != null) {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) btnClose.getLayoutParams();
+                lp.topMargin = topPad + (int) (12 * getResources().getDisplayMetrics().density);
+                lp.rightMargin = rightPad + (int) (16 * getResources().getDisplayMetrics().density);
+                btnClose.setLayoutParams(lp);
+            }
+            return insets;
+        });
+
+        // Frosted obsidian glass circle background with high-contrast pure white X
+        if (btnClose != null) {
+            GradientDrawable closeBg = new GradientDrawable();
+            closeBg.setShape(GradientDrawable.OVAL);
+            closeBg.setColor(Color.parseColor("#99121316"));
+            closeBg.setStroke((int) (1.5f * getResources().getDisplayMetrics().density), Color.parseColor("#4DFFFFFF"));
+            btnClose.setBackground(closeBg);
+            btnClose.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FFFFFF")));
+            btnClose.setOnClickListener(v -> {
+                triggerHapticTick();
+                dialog.dismiss();
+            });
+        }
 
         Bitmap bmp = BenchCollectionManager.loadThumbnail(this, photoPath, 1600);
         if (bmp != null) {
             iv.setImageBitmap(bmp);
         }
-        btnClose.setOnClickListener(v -> dialog.dismiss());
         iv.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }

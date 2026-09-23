@@ -124,7 +124,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="Aucun banc trouvé à cette adresse"
+        android:text="Aucun lieu ou adresse trouvé à Montréal"
         android:textSize="13sp"
         android:textColor="@color/text_muted"
         android:visibility="gone" />
