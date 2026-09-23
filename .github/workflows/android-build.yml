@@ -76,16 +76,18 @@ jobs:
 
           100% Native, zero-cloud vector map and public bench navigator for Montreal.
 
-          #### Highlights (${{ github.ref_name }}):
-          - **🎨 8 Map Rendering Styles & Daily Rotation**: Automatic day-of-week style rotation and manual picker (Clean Minimal, Architectural Hairline, Bauhaus Gras, Cadastre Tireté, Double Casing, Tracé Artistique, Matrice Pointillée, Noir Argentique).
-          - **👆 Smooth Double-Tap Zoom**: Instant 2.2x magnification centered on the tapped location.
-          - **🧭 Stabilized Upright Pins & Clean Minimalist Compass**: Teardrop location pins counter-rotate to always stand vertically upright on rotation; ultra-clean compass dial with one-tap True North reset and 2x zoom.
+          #### Highlights:
+          - **🧭 Integrated Swiss Compass**: Built directly into the top header bar (last icon on the right) with real-time True North needle tracking and one-tap re-alignment & zoom.
+          - **🔍 Civic Address & Location Search Engine**: Geocoded search for civic addresses (e.g., 3450 Saint-Urbain), streets, parks, neighborhoods, and GPS coordinates with auto-center.
+          - **◆ Custom Bench Creation ("Mes bancs")**: Long-press on open space to add benches discovered in the field with a distinct diamond glyph (`◆`), material, backrest, and photo capture.
+          - **🖼 Fullscreen OLED Black Photo Viewer**: Immersive photo inspection in pure black (`#000000`) with edge-to-edge camera cutout support.
+          - **📐 Touch Physics & Gesture Isolation**: Complete elimination of accidental clicks or long-presses during pinch-to-zoom and pan gestures.
+          - **🎨 8 Map Rendering Styles & Daily Rotation**: Clean Minimal, Architectural Hairline, Bauhaus Gras, Cadastre Tireté, Double Casing, Tracé Artistique, Matrice Pointillée, Noir Argentique.
           - **🌊 Authentic Physical Island Shorelines**: Real physical shorelines for Île de Montréal, Île des Sœurs, Île Sainte-Hélène, Île Notre-Dame, Île Bizard, and Île de la Visitation.
           - **9,602 Montreal Public Benches**: Spatially indexed with street names, park associations, materials, backrest status, and coordinates.
           - **Ultra-Fast Binary Map Format**: Custom IEEE 754 float binary format (`montreal_map.bin`) loading cartography in <70 ms.
           - **Dual Minimalist Themes**: Nordic Paper (Light) & Nocturne (Dark / OLED).
           - **🤝 Rendez-vous à mi-chemin**: 100% local, zero-server coordinate beacon exchange for discovering halfway benches between friends.
-          - **Collections & Photo Notes**: Offline bookmarking with camera integration.
 
           #### Assets:
           - `BenchMap-${{ github.ref_name }}-release.apk`: Production-ready Android APK

@@ -1,0 +1,50 @@
+=== FICHE GOOGLE PLAY STORE (FRANÇAIS) ===
+
+[TITRE DE L'APPLICATION] (Max 30 caractères)
+BenchMap — Bancs de Montréal
+
+[DESCRIPTION COURTE] (Max 80 caractères)
+Atlas vectoriel hors-ligne des 9 602 bancs publics de Montréal. 100% privé.
+
+[DESCRIPTION COMPLÈTE] (Max 4 000 caractères)
+S'asseoir à Montréal n'est pas un geste anodin : c'est habiter la ville à hauteur de regard, faire corps avec ses ruelles ombragées, ses parcs centenaires et ses rives fluviales.
+
+BenchMap est un atlas vectoriel 100 % hors-ligne et souverain des 9 602 bancs publics de la métropole. Conçue selon les principes du minimalisme suisse, l'application offre aux marcheurs, flâneurs et citadins une cartographie instantanée, intime et respectueuse de la vie privée.
+
+ZÉRO TRACE • ZÉRO COMPTE • 100% HORS-LIGNE
+• Aucun compte utilisateur, aucun identifiant publicitaire, aucune télémétrie.
+• Aucune dépendance au cloud : l'ensemble des rives, parcs (1 648), rues (29 708 segments) et bancs est embarqué dans un format binaire ultra-rapide (< 70 ms de chargement).
+• Vos données, notes et photos restent exclusivement stockées sur votre appareil.
+
+FONCTIONNALITÉS CLÉS
+
+🧭 BOUSSOLE SUISSE INTÉGRÉE
+Une boussole dynamique intégrée au bandeau supérieur indique le Nord en temps réel au rythme de la rotation de la carte. Un simple tap réaligne instantanément la vue au Nord et déclenche un zoom avant d'exploration.
+
+🔍 RECHERCHE D'ADRESSES & DE LIEUX
+Recherchez une adresse civique montréalaise (ex: 3450 Saint-Urbain), une rue, un parc, un quartier emblématique (Plateau-Mont-Royal, Mile End, Vieux-Montréal, Griffintown, Verdun...) ou des coordonnées GPS brutes, avec recentrage fluide automatique.
+
+◆ AJOUT DE BANCS PERSONNALISÉS (« MES BANCS »)
+Un appui long sur un espace libre de la carte permet d'ajouter un banc public observé sur le terrain mais absent des données municipales. Visualisé par un glyphe distinctif en losange (◆), complétez sa fiche avec matériaux, dossier, notes et photos locales.
+
+🖼 VISUALISEUR PHOTO PLEIN ÉCRAN NOIR OLED
+Visualisez les photographies de vos bancs favoris dans un cadre épuré en noir absolu (#000000) masquant les barres système pour une immersion totale.
+
+🤝 RENDEZ-VOUS À MI-CHEMIN SANS SERVEUR
+Trouvez facilement le banc public idéal situé à mi-chemin entre deux personnes. Échangez une clé de position hors-ligne sécurisée avec rayon de flou de confidentialité (rue ~150 m ou quartier ~300 m) sans jamais exposer votre domicile.
+
+🎨 8 STYLES CARTOGRAPHIQUES & MODE SOMBRE
+Basculez entre le thème clair « Nordic Paper » et le thème sombre « Nocturne (OLED) ». Profitez de 8 styles graphiques de voirie (Clean Minimal, Architectural Hairline, Bauhaus Gras, Cadastre Tireté...).
+
+🎲 EXPLORATION INTELLIGENTE
+• Au hasard : Sautez vers un banc surprenant n'importe où sur l'île.
+• Le plus proche : Calcul euclidien instantané vers le siège le plus proche.
+• Navigation piétonne : Lancez l'itinéraire à pied en un clic dans votre application de guidage favorite (OsmAnd, Organic Maps, Google Maps).
+
+DONNÉES OUVERTES
+Données fournies sous licence ouverte par la Ville de Montréal (donnees.montreal.ca).
+Code source ouvert sous licence libre MIT : github.com/tripledoublev/bancs-publics
+
+Développé avec passion à Montréal par Vincent Charlebois.
+Courriel : vincentcharlebois@gmail.com
+Politique de confidentialité : https://tripledoublev.github.io/bancs-publics/privacy.html

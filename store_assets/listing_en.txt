@@ -1,0 +1,50 @@
+=== GOOGLE PLAY STORE LISTING (ENGLISH) ===
+
+[APP TITLE] (Max 30 chars)
+BenchMap — Montreal Benches
+
+[SHORT DESCRIPTION] (Max 80 chars)
+100% offline vector atlas of all 9,602 public benches in Montreal. Zero tracking.
+
+[FULL DESCRIPTION] (Max 4,000 chars)
+Sitting in Montreal is not a trivial gesture: it means inhabiting the city at eye level, taking in its leafy alleyways, centennial parks, and scenic riverfronts.
+
+BenchMap is a 100% offline, local-first vector atlas of all 9,602 public benches across the Island of Montreal. Built with an authentic Swiss minimalist aesthetic, it provides walkers, flâneurs, and citizens with an intimate, instantaneous, and private cartography of urban rest.
+
+ZERO TRACKING • ZERO ACCOUNTS • 100% OFFLINE
+• No accounts, no advertising identifiers, no analytics, no background telemetry.
+• Zero cloud dependency: All shorelines, 1,648 municipal parks, 29,708 street segments, and 9,602 benches are embedded in an ultra-fast binary format (< 70 ms loading time).
+• Your saved lists, notes, and photos stay strictly on your local device.
+
+KEY FEATURES
+
+🧭 INTEGRATED SWISS COMPASS
+A precision two-tone compass needle embedded in the top navigation bar dynamically tracks True North. One tap smoothly animates the map to True North and triggers an exploratory zoom.
+
+🔍 CIVIC ADDRESS & NEIGHBORHOOD SEARCH
+Search by exact Montreal civic address (e.g., 3450 Saint-Urbain), street, park, iconic neighborhood (Plateau-Mont-Royal, Mile End, Old Montreal, Griffintown, Verdun...), or raw GPS coordinates with smooth auto-centering.
+
+◆ CUSTOM BENCH CREATION ("MY BENCHES")
+Long-press on any open space on the map to add a public bench discovered in the field that is absent from official municipal data. Displayed with a distinctive diamond glyph (◆), complete its card with material, backrest, personal notes, and local photos.
+
+🖼 FULLSCREEN OLED BLACK PHOTO VIEWER
+View photos of your favorite benches against a true pitch-black OLED background (#000000) that automatically immerses beneath system cutout bars.
+
+🤝 SERVERLESS HALFWAY MEETUPS
+Find the fair midpoint bench between two friends. Exchange lightweight offline encrypted tokens with configurable privacy blur (neighborhood ~300 m or street ~150 m) without ever exposing your home address.
+
+🎨 8 MAP RENDER STYLES & DARK MODE
+Switch seamlessly between Nordic Paper (Light) and Nocturne (OLED Dark). Enjoy 8 vector line styles (Clean Minimal, Architectural Hairline, Bold Bauhaus, Dashed Cadastre...).
+
+🎲 SMART DISCOVERY
+• Random bench: Jump to an unexpected seat across the island.
+• Nearest bench: Instant Euclidean k-NN search to locate your closest seat.
+• Walking navigation: One-tap intent to start pedestrian directions in OsmAnd, Organic Maps, or Google Maps.
+
+OPEN DATA
+Data provided under open license by the City of Montreal (donnees.montreal.ca).
+Open source code under the MIT License: github.com/tripledoublev/bancs-publics
+
+Crafted with care in Montreal by Vincent Charlebois.
+Email: vincentcharlebois@gmail.com
+Privacy Policy: https://tripledoublev.github.io/bancs-publics/privacy.html
