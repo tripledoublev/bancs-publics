@@ -472,9 +472,10 @@ public class MontrealBenchMapView extends View {
     private double centerMercY = latToMercatorY(CENTER_LAT);
 
     // Zoom & Limits
+    public static final float ZOOM_LOCATION = 1620000f; // Neighbourhood focus zoom (two 5% steps broader than 1.8M)
     private static final float MIN_SCALE = 55000f;      // Whole metropolitan island
     private static final float MAX_SCALE = 65000000f;   // Deep architectural resolution (~70m street width)
-    private float scale = 220000f;                      // Default Montreal overview
+    private float scale = ZOOM_LOCATION;                // Start focused at neighbourhood level for instant, lightweight rendering
     private float density = 1.0f;
 
     // Gestures & Physics
@@ -1484,7 +1485,7 @@ public class MontrealBenchMapView extends View {
 
     public void centerOnUser() {
         if (userLocation != null) {
-            animateToCoords(userLocation.getLatitude(), userLocation.getLongitude(), 1800000f);
+            animateToCoords(userLocation.getLatitude(), userLocation.getLongitude(), ZOOM_LOCATION);
         }
     }
 

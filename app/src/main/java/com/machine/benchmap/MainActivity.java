@@ -176,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
     private Vibrator vibrator;
 
     private Location lastLocation = null;
+    private boolean hasCenteredOnInitialLocation = false;
     private Bench currentlySelectedBench = null;
 
     // Compass calculations
@@ -188,6 +189,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         public void onLocationChanged(@NonNull Location location) {
             lastLocation = location;
             benchMapView.setUserLocation(location);
+            if (!hasCenteredOnInitialLocation) {
+                hasCenteredOnInitialLocation = true;
+                benchMapView.centerOnUser();
+            }
             if (cardAllBenches != null && cardAllBenches.getVisibility() == View.VISIBLE && allBenchesAdapter != null) {
                 allBenchesAdapter.updateDistances(location.getLatitude(), location.getLongitude());
             }
@@ -3062,6 +3067,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
                 if (bestLoc != null) {
                     lastLocation = bestLoc;
                     benchMapView.setUserLocation(bestLoc);
+                    if (!hasCenteredOnInitialLocation) {
+                        hasCenteredOnInitialLocation = true;
+                        benchMapView.centerOnUser();
+                    }
                 }
             }
         } catch (Exception ignored) {}
