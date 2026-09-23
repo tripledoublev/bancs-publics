@@ -29,7 +29,7 @@ En 60 secondes, votre site et vos documents légaux sont accessibles publiquemen
 1. Rendez-vous sur [play.google.com/console](https://play.google.com/console).
 2. Cliquez sur **Créer une application** (*Create app*).
 3. Remplissez les champs initiaux :
-   - **Nom de l'application** : `BenchMap — Bancs de Montréal`
+   - **Nom de l'application** : `Bancs publics`
    - **Langue par défaut** : `Français (Canada) - fr-CA`
    - **Type d'application** : `Application`
    - **Gratuite ou payante** : `Gratuite`
@@ -93,9 +93,9 @@ C'est ici que Google Play valide l'absence de collecte de données. Grâce à l'
 Dans le menu de gauche, rendez-vous dans **Présence sur le Play Store** > **Fiche principale du Play Store**.
 
 ### Textes (prêts dans [`store_assets/listing_fr.txt`](store_assets/listing_fr.txt)) :
-- **Nom de l'application** (28 / 30 car.) :
+- **Nom de l'application** (13 / 30 car.) :
   ```
-  BenchMap — Bancs de Montréal
+  Bancs publics
   ```
 - **Description courte** (75 / 80 car.) :
   ```

@@ -65,7 +65,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Plutôt que de chercher où vous retrouver, BenchMap calcule le banc idéal situé exactement à mi-chemin entre vous et un proche. Votre position est floutée (~300m) pour préserver votre vie privée. Zéro compte, zéro serveur, 100% hors-ligne."
+            android:text="Plutôt que de chercher où vous retrouver, Bancs publics calcule le banc idéal situé exactement à mi-chemin entre vous et un proche. Votre position est floutée (~300m) pour préserver votre vie privée. Zéro compte, zéro serveur, 100% hors-ligne."
             android:textSize="11.5sp"
             android:lineSpacingExtra="2dp"
             android:textColor="@color/text_muted" />

@@ -195,7 +195,7 @@ public class MeetupKey {
     public static String formatShareText(String key, String optionalLocationName) {
         StringBuilder sb = new StringBuilder();
         sb.append("🤝 Retrouvons-nous à mi-chemin !\n\n");
-        sb.append("J'ai préparé un point de rencontre confidentiel sur BenchMap (zéro serveur, 100% hors-ligne).\n\n");
+        sb.append("J'ai préparé un point de rencontre confidentiel sur Bancs publics (zéro serveur, 100% hors-ligne).\n\n");
         if (optionalLocationName != null && !optionalLocationName.isEmpty() && !"Ma position".equals(optionalLocationName)) {
             sb.append("Mon secteur : ").append(optionalLocationName).append("\n\n");
         }

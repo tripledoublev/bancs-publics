@@ -1296,7 +1296,7 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
 
         btnCopyKey.setOnClickListener(v -> {
             triggerHapticTick();
-            copyToClipboard("BenchMap Rendez-vous", inviteLink);
+            copyToClipboard("Rendez-vous Bancs publics", inviteLink);
             Toast.makeText(this, "Lien d'invitation copié !", Toast.LENGTH_SHORT).show();
         });
 
