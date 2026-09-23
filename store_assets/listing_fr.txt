@@ -1,7 +1,7 @@
 === FICHE GOOGLE PLAY STORE (FRANÇAIS) ===
 
 [TITRE DE L'APPLICATION] (Max 30 caractères)
-BenchMap — Bancs de Montréal
+Bancs publics
 
 [DESCRIPTION COURTE] (Max 80 caractères)
 Atlas vectoriel hors-ligne des 9 602 bancs publics de Montréal. 100% privé.
@@ -9,7 +9,7 @@ Atlas vectoriel hors-ligne des 9 602 bancs publics de Montréal. 100% privé.
 [DESCRIPTION COMPLÈTE] (Max 4 000 caractères)
 S'asseoir à Montréal n'est pas un geste anodin : c'est habiter la ville à hauteur de regard, faire corps avec ses ruelles ombragées, ses parcs centenaires et ses rives fluviales.
 
-BenchMap est un atlas vectoriel 100 % hors-ligne et souverain des 9 602 bancs publics de la métropole. Conçue selon les principes du minimalisme suisse, l'application offre aux marcheurs, flâneurs et citadins une cartographie instantanée, intime et respectueuse de la vie privée.
+Bancs publics est un atlas vectoriel 100 % hors-ligne et souverain des 9 602 bancs publics de la métropole. Conçue selon les principes du minimalisme suisse, l'application offre aux marcheurs, flâneurs et citadins une cartographie instantanée, intime et respectueuse de la vie privée.
 
 ZÉRO TRACE • ZÉRO COMPTE • 100% HORS-LIGNE
 • Aucun compte utilisateur, aucun identifiant publicitaire, aucune télémétrie.

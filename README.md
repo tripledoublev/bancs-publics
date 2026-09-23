@@ -1,6 +1,6 @@
-# BenchMap (Les bancs de Montréal) 🪑
+# Bancs publics 🪑
 
-> *« S'asseoir à Montréal n'est pas un geste anodin : c'est habiter la ville à hauteur de regard, faire corps avec ses ruelles ombragées, ses parcs centenaires et ses rives fluviales. BenchMap est un atlas vectoriel hors-ligne, conçu dans le respect de l'esprit du minimalisme, offrant à chaque marcheur, flâneur et citoyen une cartographie instantanée et intime des 9 602 bancs publics de la métropole. Zéro trace, zéro serveur, pure liberté urbaine. »*
+> *« S'asseoir à Montréal n'est pas un geste anodin : c'est habiter la ville à hauteur de regard, faire corps avec ses ruelles ombragées, ses parcs centenaires et ses rives fluviales. Bancs publics est un atlas vectoriel hors-ligne, conçu dans le respect de l'esprit du minimalisme, offrant à chaque marcheur, flâneur et citoyen une cartographie instantanée et intime des 9 602 bancs publics de la métropole. Zéro trace, zéro serveur, pure liberté urbaine. »*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android_10+-3DDC84.svg?logo=android&logoColor=white)](https://android.com)

@@ -1,14 +1,14 @@
-# 🇨🇦 Bancs de Montréal / Montreal Benches (BenchMap)
+# 🇨🇦 Bancs publics (Montréal)
 ## Google Play Store Listing & Metadata Package
 
 ---
 
 ### 1. Store Identity & Core Info
 - **App Title (Max 30 chars)**:
-  - **FR (Défaut)**: `Bancs de Montréal – BenchMap` (28 caractères)
-  - **EN**: `Montreal Benches – BenchMap` (27 characters)
+  - **FR (Défaut)**: `Bancs publics` (13 caractères)
+  - **EN**: `Bancs publics` (13 characters)
 - **Package Name**: `com.machine.benchmap`
-- **Current Version**: `0.1.0` (versionCode `2`)
+- **Current Version**: `0.2.5` (versionCode `8`)
 - **Category**: `Maps & Navigation` (Cartes et navigation) or `Travel & Local` (Voyages et guides locaux)
 - **Price**: Gratuit (Free) — 0 publicité, 0 achat intégré, 0 collecte de données.
 - **Content Rating**: Everyone / Tous publics (PEGI 3).
