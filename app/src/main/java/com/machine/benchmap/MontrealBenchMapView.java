@@ -130,7 +130,6 @@ public class MontrealBenchMapView extends View {
 
             boolean isDashed = (style == MapRenderStyle.DASHED_CADASTRAL);
             boolean isDotted = (style == MapRenderStyle.DOTTED_MATRIX);
-            boolean isBrush = (style == MapRenderStyle.ARTISTIC_BRUSH);
 
             float dashLen = 5.5f * density;
             float gapLen = 3.8f * density;
@@ -212,16 +211,6 @@ public class MontrealBenchMapView extends View {
                                     lineBuffer[bufIdx++] = py;
                                     t += dotStep;
                                 }
-                            } else if (isBrush) {
-                                float jitter = ((float) (Math.sin(coords[j] * 32000.0) * 1.8 + Math.cos(coords[j + 1] * 24000.0) * 1.4)) * density;
-                                if (bufIdx + 4 > maxCap) {
-                                    canvas.drawLines(lineBuffer, 0, bufIdx, paint);
-                                    bufIdx = 0;
-                                }
-                                lineBuffer[bufIdx++] = x0 + jitter;
-                                lineBuffer[bufIdx++] = y0 - jitter;
-                                lineBuffer[bufIdx++] = x1 - jitter;
-                                lineBuffer[bufIdx++] = y1 + jitter;
                             } else {
                                 if (bufIdx + 4 > maxCap) {
                                     canvas.drawLines(lineBuffer, 0, bufIdx, paint);
@@ -377,8 +366,6 @@ public class MontrealBenchMapView extends View {
     private PathEffect effectDashedPark;
     private PathEffect effectDottedShoreline;
     private PathEffect effectDottedPark;
-    private PathEffect effectBrushShoreline;
-    private PathEffect effectBrushPark;
 
     // Geographic center of Montreal (Mount Royal)
     public static final double CENTER_LAT = 45.50884;
@@ -496,8 +483,6 @@ public class MontrealBenchMapView extends View {
         effectDashedPark = new DashPathEffect(new float[]{8f * density, 6f * density}, 0);
         effectDottedShoreline = new DashPathEffect(new float[]{2.5f * density, 5.5f * density}, 0);
         effectDottedPark = new DashPathEffect(new float[]{2.0f * density, 5.0f * density}, 0);
-        effectBrushShoreline = new DiscretePathEffect(14f * density, 3.5f * density);
-        effectBrushPark = new DiscretePathEffect(10f * density, 2.5f * density);
 
         // Benches
         paintBenchStreet.setStyle(Paint.Style.FILL);
@@ -799,14 +784,16 @@ public class MontrealBenchMapView extends View {
                 break;
 
             case ARTISTIC_BRUSH:
-                paintShoreline.setStrokeWidth(2.4f * density);
+                paintShoreline.setStrokeWidth(2.6f * density);
                 paintShoreline.setStrokeCap(Paint.Cap.ROUND);
-                paintShoreline.setPathEffect(effectBrushShoreline);
+                paintShoreline.setStrokeJoin(Paint.Join.ROUND);
                 paintParkBorder.setStrokeWidth(1.6f * density);
                 paintParkBorder.setStrokeCap(Paint.Cap.ROUND);
-                paintParkBorder.setPathEffect(effectBrushPark);
+                paintParkBorder.setStrokeJoin(Paint.Join.ROUND);
                 paintStreetMajor.setStrokeCap(Paint.Cap.ROUND);
+                paintStreetMajor.setStrokeJoin(Paint.Join.ROUND);
                 paintStreetMinor.setStrokeCap(Paint.Cap.ROUND);
+                paintStreetMinor.setStrokeJoin(Paint.Join.ROUND);
                 if (isDarkMode) {
                     paintLand.setColor(Color.parseColor("#141312"));
                     paintShoreline.setColor(Color.parseColor("#A8A29E"));
