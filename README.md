@@ -116,6 +116,48 @@ Output APK will be located at:
 
 ---
 
+## Developer & ADB Operations
+
+`Bancs publics` features a zero-UI, headless developer backup, export, and restore system callable directly via ADB broadcast commands.
+
+### 1. Check Data & Photo Storage Status
+```bash
+adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_STATUS
+```
+*Output:*
+```text
+Broadcast completed: result=-1, data="STATUS: 2 collections, 2 saved benches (1 custom), 2 photos (0.39 MB on disk)"
+```
+
+### 2. Export All Photos, Collections & GIS GeoJSON
+```bash
+adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_EXPORT
+```
+*Output:*
+```text
+Broadcast completed: result=-1, data="SUCCESS: Exported 2 benches (1 custom), 2 photos to /storage/emulated/0/Download/BancsPublics-Backup-latest.zip (395 KB)"
+```
+
+Pull the complete backup to your local machine:
+```bash
+adb pull /sdcard/Download/BancsPublics-Backup-latest.zip .
+```
+
+The backup archive contains:
+- `benches.geojson`: Universal RFC 7946 GeoJSON FeatureCollection with exact coordinates, notes, material, and photo associations (compatible with QGIS, Mapbox, GIS tooling).
+- `collections.json`: Full internal database schema and collections.
+- `benchmap_prefs.xml`: Application visual preferences and settings.
+- `bench_photos/*.jpg`: All original photos taken or attached to public and custom benches.
+
+### 3. Restore / Import Data
+Place any previous backup archive at `/sdcard/Download/BancsPublics-Backup-latest.zip` (or `/sdcard/Download/bancs_publics_restore.zip`) and run:
+```bash
+adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_IMPORT
+```
+The app instantly extracts all photos, reloads internal collections, and live-refreshes the map canvas without requiring an app restart.
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -257,6 +257,15 @@ public class BenchCollectionManager {
         return result;
     }
 
+    public synchronized List<SavedBench> getAllSavedBenches() {
+        return new ArrayList<>(savedBenches.values());
+    }
+
+    public synchronized void reload() {
+        this.isLoaded = false;
+        load();
+    }
+
     public synchronized void deleteCustomBench(String benchId) {
         removeBenchCompletely(benchId);
     }
