@@ -47,8 +47,8 @@ public enum MapRenderStyle {
     ),
     ARTISTIC_BRUSH(
             "artistic_brush",
-            "Atelier Pinceau (Brush)",
-            "Traits organiques, gravure et esquisse à l'encre",
+            "Aquarelle & Encre (Brush)",
+            "Lavis aquarelle, calligraphie à l'encre et sceaux vermillon",
             "🖌️"
     ),
     DOTTED_MATRIX(
