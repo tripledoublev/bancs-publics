@@ -2,10 +2,12 @@ package com.machine.benchmap;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -505,8 +507,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
             btnRandom.setStrokeColor(ColorStateList.valueOf(borderCard));
         }
         if (btnNearest != null) {
-            btnNearest.setBackgroundColor(darkMode ? Color.parseColor("#F8FAFC") : Color.parseColor("#0F172A"));
-            btnNearest.setTextColor(darkMode ? Color.parseColor("#0F172A") : Color.parseColor("#FFFFFF"));
+            btnNearest.setBackgroundColor(bgCard);
+            btnNearest.setTextColor(textPrimary);
+            btnNearest.setStrokeColor(ColorStateList.valueOf(borderCard));
         }
 
         // 3. Detail Card
@@ -3225,6 +3228,21 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         dialog.show();
     }
 
+    private final BroadcastReceiver dataReloadReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (DevExportReceiver.ACTION_DATA_RELOADED.equals(intent.getAction())) {
+                runOnUiThread(() -> {
+                    benchMapView.setCustomBenches(collectionManager.getAllCustomBenches());
+                    benchMapView.postInvalidate();
+                    if (currentlySelectedBench != null) {
+                        updateDetailCardSavedState(currentlySelectedBench);
+                    }
+                });
+            }
+        }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -3234,6 +3252,10 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             startLocationUpdates();
         }
+        try {
+            IntentFilter filter = new IntentFilter(DevExportReceiver.ACTION_DATA_RELOADED);
+            ContextCompat.registerReceiver(this, dataReloadReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        } catch (Exception ignored) {}
     }
 
     @Override
@@ -3245,6 +3267,9 @@ public class MainActivity extends AppCompatActivity implements MontrealBenchMapV
         if (locationManager != null) {
             locationManager.removeUpdates(locationListener);
         }
+        try {
+            unregisterReceiver(dataReloadReceiver);
+        } catch (Exception ignored) {}
     }
 
     @Override
