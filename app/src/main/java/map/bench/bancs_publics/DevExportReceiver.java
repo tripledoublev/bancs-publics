@@ -1,4 +1,4 @@
-package com.machine.benchmap;
+package map.bench.bancs_publics;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -32,22 +32,31 @@ import java.util.zip.ZipOutputStream;
  * Headless Developer BroadcastReceiver for ADB data backup, export, and restore.
  *
  * Commands:
- *   adb shell am broadcast -a com.machine.benchmap.ACTION_EXPORT
- *   adb shell am broadcast -a com.machine.benchmap.ACTION_IMPORT [--es file /path/to/backup.zip]
- *   adb shell am broadcast -a com.machine.benchmap.ACTION_STATUS
+ *   adb shell am broadcast -a map.bench.bancs_publics.ACTION_EXPORT
+ *   adb shell am broadcast -a map.bench.bancs_publics.ACTION_IMPORT [--es file /path/to/backup.zip]
+ *   adb shell am broadcast -a map.bench.bancs_publics.ACTION_STATUS
  */
 public class DevExportReceiver extends BroadcastReceiver {
     private static final String TAG = "DevExport";
 
-    public static final String ACTION_EXPORT = "com.machine.benchmap.ACTION_EXPORT";
-    public static final String ACTION_IMPORT = "com.machine.benchmap.ACTION_IMPORT";
-    public static final String ACTION_STATUS = "com.machine.benchmap.ACTION_STATUS";
-    public static final String ACTION_DATA_RELOADED = "com.machine.benchmap.DATA_RELOADED";
+    public static final String ACTION_EXPORT = "map.bench.bancs_publics.ACTION_EXPORT";
+    public static final String ACTION_IMPORT = "map.bench.bancs_publics.ACTION_IMPORT";
+    public static final String ACTION_STATUS = "map.bench.bancs_publics.ACTION_STATUS";
+    public static final String ACTION_DATA_RELOADED = "map.bench.bancs_publics.DATA_RELOADED";
+
+    // Legacy actions for backward compatibility
+    public static final String LEGACY_ACTION_EXPORT = "com.machine.benchmap.ACTION_EXPORT";
+    public static final String LEGACY_ACTION_IMPORT = "com.machine.benchmap.ACTION_IMPORT";
+    public static final String LEGACY_ACTION_STATUS = "com.machine.benchmap.ACTION_STATUS";
 
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) return;
         String action = intent.getAction();
+
+        if (LEGACY_ACTION_EXPORT.equals(action)) action = ACTION_EXPORT;
+        if (LEGACY_ACTION_IMPORT.equals(action)) action = ACTION_IMPORT;
+        if (LEGACY_ACTION_STATUS.equals(action)) action = ACTION_STATUS;
 
         switch (action) {
             case ACTION_EXPORT:

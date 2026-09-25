@@ -1,4 +1,4 @@
-package com.machine.benchmap;
+package map.bench.bancs_publics;
 
 import android.Manifest;
 import android.annotation.SuppressLint;

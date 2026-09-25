@@ -6,7 +6,7 @@
     android:layout_height="match_parent">
 
     <!-- 1. Native Canvas Map View (Full Island Vector Streets & Benches) -->
-    <com.machine.benchmap.MontrealBenchMapView
+    <map.bench.bancs_publics.MontrealBenchMapView
         android:id="@+id/bench_map_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -369,7 +369,7 @@
                     android:padding="7dp"
                     android:src="@drawable/ic_theme_moon" />
 
-                <com.machine.benchmap.SwissCompassView
+                <map.bench.bancs_publics.SwissCompassView
                     android:id="@+id/btn_compass"
                     android:layout_width="36dp"
                     android:layout_height="36dp"

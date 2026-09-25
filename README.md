@@ -122,7 +122,7 @@ Output APK will be located at:
 
 ### 1. Check Data & Photo Storage Status
 ```bash
-adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_STATUS
+adb shell am broadcast -n map.bench.bancs_publics/.DevExportReceiver -a map.bench.bancs_publics.ACTION_STATUS
 ```
 *Output:*
 ```text
@@ -131,7 +131,7 @@ Broadcast completed: result=-1, data="STATUS: 2 collections, 2 saved benches (1 
 
 ### 2. Export All Photos, Collections & GIS GeoJSON
 ```bash
-adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_EXPORT
+adb shell am broadcast -n map.bench.bancs_publics/.DevExportReceiver -a map.bench.bancs_publics.ACTION_EXPORT
 ```
 *Output:*
 ```text
@@ -152,7 +152,7 @@ The backup archive contains:
 ### 3. Restore / Import Data
 Place any previous backup archive at `/sdcard/Download/BancsPublics-Backup-latest.zip` (or `/sdcard/Download/bancs_publics_restore.zip`) and run:
 ```bash
-adb shell am broadcast -n com.machine.benchmap/.DevExportReceiver -a com.machine.benchmap.ACTION_IMPORT
+adb shell am broadcast -n map.bench.bancs_publics/.DevExportReceiver -a map.bench.bancs_publics.ACTION_IMPORT
 ```
 The app instantly extracts all photos, reloads internal collections, and live-refreshes the map canvas without requiring an app restart.
 
