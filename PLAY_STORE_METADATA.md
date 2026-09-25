@@ -8,7 +8,7 @@
   - **FR (Défaut)**: `Bancs publics` (13 caractères)
   - **EN**: `Bancs publics` (13 characters)
 - **Package Name**: `map.bench.bancs_publics`
-- **Current Version**: `0.2.9` (versionCode `13`)
+- **Current Version**: `0.2.10` (versionCode `14`)
 - **Category**: `Maps & Navigation` (Cartes et navigation) or `Travel & Local` (Voyages et guides locaux)
 - **Price**: Gratuit (Free) — 0 publicité, 0 achat intégré, 0 collecte de données.
 - **Content Rating**: Everyone / Tous publics (PEGI 3).
