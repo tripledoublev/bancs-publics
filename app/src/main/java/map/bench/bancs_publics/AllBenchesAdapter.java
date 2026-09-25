@@ -1,4 +1,4 @@
-package com.machine.benchmap;
+package map.bench.bancs_publics;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;

@@ -63,6 +63,9 @@
             android:name=".DevExportReceiver"
             android:exported="true">
             <intent-filter>
+                <action android:name="map.bench.bancs_publics.ACTION_EXPORT" />
+                <action android:name="map.bench.bancs_publics.ACTION_IMPORT" />
+                <action android:name="map.bench.bancs_publics.ACTION_STATUS" />
                 <action android:name="com.machine.benchmap.ACTION_EXPORT" />
                 <action android:name="com.machine.benchmap.ACTION_IMPORT" />
                 <action android:name="com.machine.benchmap.ACTION_STATUS" />

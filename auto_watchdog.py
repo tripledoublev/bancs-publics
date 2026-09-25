@@ -5,8 +5,8 @@ import socket
 import sys
 
 APK_PATH = "/root/apps/BenchMap/app/build/outputs/apk/debug/app-debug.apk"
-PKG = "com.machine.benchmap"
-ACTIVITY = "com.machine.benchmap/.MainActivity"
+PKG = "map.bench.bancs_publics"
+ACTIVITY = "map.bench.bancs_publics/.MainActivity"
 
 def is_connected():
     out = subprocess.getoutput("adb devices")

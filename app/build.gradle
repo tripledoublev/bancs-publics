@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.machine.benchmap'
+    namespace 'map.bench.bancs_publics'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.machine.benchmap"
+        applicationId "map.bench.bancs_publics"
         minSdk 29
         targetSdk 34
         versionCode 13
