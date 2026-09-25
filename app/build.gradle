@@ -10,30 +10,25 @@ android {
         applicationId "com.machine.benchmap"
         minSdk 29
         targetSdk 34
-        versionCode 12
+        versionCode 13
         versionName "0.2.9"
     }
 
     signingConfigs {
         release {
-            def ksFile = file('../benchmap-release.jks')
-            if (ksFile.exists()) {
-                storeFile ksFile
-                storePassword System.getenv("KEYSTORE_PASSWORD") ?: 'benchmap2026mtl'
-                keyAlias System.getenv("KEY_ALIAS") ?: 'benchmap'
-                keyPassword System.getenv("KEY_PASSWORD") ?: 'benchmap2026mtl'
-            }
+            storeFile rootProject.file('benchmap-release.jks')
+            storePassword 'benchmap2026mtl'
+            keyAlias 'benchmap'
+            keyPassword 'benchmap2026mtl'
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
 
     buildTypes {
         release {
-            def ksFile = file('../benchmap-release.jks')
-            if (ksFile.exists()) {
-                signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
