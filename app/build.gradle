@@ -10,8 +10,8 @@ android {
         applicationId "map.bench.bancs_publics"
         minSdk 29
         targetSdk 34
-        versionCode 13
-        versionName "0.2.9"
+        versionCode 14
+        versionName "0.2.10"
     }
 
     signingConfigs {
