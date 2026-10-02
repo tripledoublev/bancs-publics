@@ -18,10 +18,9 @@ Tous les fichiers de production ont été compilés, signés et déposés dans v
 | **Assets Graphiques du Store** | `/sdcard/Download/store_assets/` | Icône 512x512, Bannière 1024x500, Captures d'écran 1080x2400. |
 | **Politique de Confidentialité** | `/sdcard/Download/store_assets/privacy_policy.html` | Page HTML conforme RGPD / Google Play à héberger. |
 
-> ⚠️ **IMPORTANT : Sauvegarde de la Clé de Production (`benchmap-release.jks`)**
-> - **Alias** : `benchmap`
-> - **Mot de passe** : `[REDACTED]`
-> - Conservez une copie de `benchmap-release.jks` et de ce mot de passe dans un endroit sûr (ex: coffre-fort de mots de passe, disque dur externe). Si vous perdez cette clé, Google n'autorisera aucune mise à jour de l'application sur le Play Store !
+> 🔒 **Configuration de la Clé de Signature (`keystore.properties`)**
+> - Les informations de signature sont désormais gérées via un fichier `keystore.properties` local et non suivi par Git, ou via des variables d'environnement en CI (`KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`).
+> - Ne commitez jamais de fichier `.jks` ni de mot de passe dans un dépôt public.
 
 ---
 

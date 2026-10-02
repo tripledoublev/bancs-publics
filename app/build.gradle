@@ -16,18 +16,33 @@ android {
 
     signingConfigs {
         release {
-            storeFile rootProject.file('benchmap-release.jks')
-            storePassword '[REDACTED]'
-            keyAlias 'benchmap'
-            keyPassword '[REDACTED]'
-            v1SigningEnabled true
-            v2SigningEnabled true
+            def keystorePropsFile = rootProject.file('keystore.properties')
+            def props = new Properties()
+            if (keystorePropsFile.exists()) {
+                keystorePropsFile.withInputStream { props.load(it) }
+            }
+
+            def storeFilePath = System.getenv("KEYSTORE_FILE") ?: props.getProperty('storeFile')
+            def storePass = System.getenv("KEYSTORE_PASSWORD") ?: props.getProperty('storePassword')
+            def keyAliasVal = System.getenv("KEY_ALIAS") ?: props.getProperty('keyAlias')
+            def keyPass = System.getenv("KEY_PASSWORD") ?: props.getProperty('keyPassword')
+
+            if (storeFilePath && file(storeFilePath).exists() && storePass) {
+                storeFile file(storeFilePath)
+                storePassword storePass
+                keyAlias keyAliasVal ?: 'benchmap-upload'
+                keyPassword keyPass ?: storePass
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            }
             debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
