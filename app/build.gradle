@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'map.bench.bancs_publics'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "map.bench.bancs_publics"
         minSdk 29
-        targetSdk 34
-        versionCode 14
-        versionName "0.2.10"
+        targetSdk 36
+        versionCode 15
+        versionName "0.2.11"
     }
 
     signingConfigs {
